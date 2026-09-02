@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import CreateDonation from "./CreateDonation";
 
-const API_URL = "http://localhost:5000/api/donations/my-donations";
+const API_URL = `${import.meta.env.VITE_API_URL}/api/donations/my-donations`;
 
 function DonorDashboard({ onLogout }) {
     const [showCreateDonation, setShowCreateDonation] = useState(false);
