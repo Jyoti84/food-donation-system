@@ -56,45 +56,17 @@ function App() {
         <div
             style={{
                 width: "100%",
-                minHeight: "100vh",
-                background:
-                    "linear-gradient(135deg, #e8f5e9, #f1f8e9)"
+                minHeight: "100vh"
             }}
         >
             {page === "login" ? (
-                <Login onLogin={(role) => setPage(role)} />
+                <Login
+                    onLogin={(role) => setPage(role)}
+                    onRegister={() => setPage("register")}
+                />
             ) : (
                 <Register />
             )}
-
-            <div
-                style={{
-                    textAlign: "center",
-                    padding: "20px 0 30px"
-                }}
-            >
-                <button
-                    onClick={() =>
-                        setPage(
-                            page === "login"
-                                ? "register"
-                                : "login"
-                        )
-                    }
-                    style={{
-                        border: "none",
-                        background: "transparent",
-                        color: "#198754",
-                        fontSize: "15px",
-                        fontWeight: "bold",
-                        cursor: "pointer"
-                    }}
-                >
-                    {page === "login"
-                        ? "Don't have an account? Register"
-                        : "Already have an account? Login"}
-                </button>
-            </div>
         </div>
     );
 }

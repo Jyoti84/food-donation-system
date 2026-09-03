@@ -1,510 +1,504 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
+
 const API_URL = import.meta.env.VITE_API_URL;
 
-function VolunteerDashboard({ onLogout }) {
+const VolunteerDashboard = ({ onLogout }) => {
     const [donations, setDonations] = useState([]);
     const [claimedDonations, setClaimedDonations] = useState([]);
     const [loading, setLoading] = useState(true);
     const [claimedLoading, setClaimedLoading] = useState(true);
+
     const [otpInputs, setOtpInputs] = useState({});
+    const [distributionProofs, setDistributionProofs] = useState({});
+    const [uploadingProofs, setUploadingProofs] = useState({});
 
     const [search, setSearch] = useState("");
     const [filter, setFilter] = useState("all");
 
+    const token = localStorage.getItem("token");
+
+    // ================= FETCH AVAILABLE DONATIONS =================
+
     const fetchDonations = async () => {
         try {
-            const token = localStorage.getItem("token");
+            setLoading(true);
 
             const response = await fetch(
                 `${API_URL}/api/donations`,
                 {
-                    method: "GET",
                     headers: {
-                        Authorization: `Bearer ${token}`
-                    }
+                        Authorization: `Bearer ${token}`,
+                    },
                 }
             );
 
             const data = await response.json();
 
-            if (!response.ok) {
-                alert(data.message);
-                return;
+            if (response.ok) {
+                setDonations(data.donations || []);
+            } else {
+                alert(data.message || "Failed to fetch donations");
             }
-
-            setDonations(data.donations);
         } catch (error) {
             console.error("Fetch donations error:", error);
-            alert("Server error");
+            alert("Something went wrong while fetching donations");
         } finally {
             setLoading(false);
         }
     };
 
+    // ================= FETCH CLAIMED DONATIONS =================
+
     const fetchClaimedDonations = async () => {
         try {
-            const token = localStorage.getItem("token");
+            setClaimedLoading(true);
 
             const response = await fetch(
                 `${API_URL}/api/donations/my-claimed`,
                 {
-                    method: "GET",
                     headers: {
-                        Authorization: `Bearer ${token}`
-                    }
+                        Authorization: `Bearer ${token}`,
+                    },
                 }
             );
 
             const data = await response.json();
 
-            if (!response.ok) {
-                alert(data.message);
-                return;
+            if (response.ok) {
+                setClaimedDonations(data.donations || []);
+            } else {
+                alert(data.message || "Failed to fetch claimed donations");
             }
-
-            setClaimedDonations(data.donations);
         } catch (error) {
-            console.error("Fetch claimed donations error:", error);
-            alert("Server error");
+            console.error("My claimed donations error:", error);
         } finally {
             setClaimedLoading(false);
         }
     };
 
+    // ================= CLAIM DONATION =================
+
     const claimDonation = async (donationId) => {
         try {
-            const token = localStorage.getItem("token");
-
             const response = await fetch(
                 `${API_URL}/api/donations/${donationId}/claim`,
                 {
                     method: "PUT",
                     headers: {
-                        Authorization: `Bearer ${token}`
-                    }
+                        Authorization: `Bearer ${token}`,
+                    },
                 }
             );
 
             const data = await response.json();
 
-            if (!response.ok) {
-                alert(data.message);
-                return;
+            if (response.ok) {
+                alert("Donation claimed successfully!");
+
+                fetchDonations();
+                fetchClaimedDonations();
+            } else {
+                alert(data.message || "Failed to claim donation");
             }
-
-            alert("Donation claimed successfully");
-
-            fetchDonations();
-            fetchClaimedDonations();
         } catch (error) {
             console.error("Claim donation error:", error);
-            alert("Server error");
+            alert("Something went wrong while claiming donation");
         }
     };
 
-    const generateOTP = async (donationId) => {
-        try {
-            const token = localStorage.getItem("token");
+    // ================= OTP INPUT =================
 
-            const response = await fetch(
-                `${API_URL}/api/donations/${donationId}/otp`,
-                {
-                    method: "POST",
-                    headers: {
-                        Authorization: `Bearer ${token}`
-                    }
-                }
-            );
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                alert(data.message);
-                return;
-            }
-
-            alert(`OTP generated: ${data.otp}`);
-
-            fetchClaimedDonations();
-        } catch (error) {
-            console.error("Generate OTP error:", error);
-            alert("Server error");
-        }
+    const handleOtpChange = (donationId, value) => {
+        setOtpInputs((prev) => ({
+            ...prev,
+            [donationId]: value,
+        }));
     };
+
+    // ================= VERIFY OTP =================
 
     const verifyOTP = async (donationId) => {
+        const otp = otpInputs[donationId];
+
+        if (!otp || otp.length !== 6) {
+            alert("Please enter a valid 6-digit OTP");
+            return;
+        }
+
         try {
-            const token = localStorage.getItem("token");
-            const otp = otpInputs[donationId];
-
-            if (!otp) {
-                alert("Please enter OTP");
-                return;
-            }
-
             const response = await fetch(
                 `${API_URL}/api/donations/${donationId}/verify-otp`,
                 {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
-                        Authorization: `Bearer ${token}`
+                        Authorization: `Bearer ${token}`,
                     },
                     body: JSON.stringify({
-                        otp
-                    })
+                        otp,
+                    }),
                 }
             );
 
             const data = await response.json();
 
-            if (!response.ok) {
-                alert(data.message);
-                return;
+            if (response.ok) {
+                alert(
+                    "OTP verified successfully! Food marked as picked."
+                );
+
+                setOtpInputs((prev) => {
+                    const updated = { ...prev };
+                    delete updated[donationId];
+                    return updated;
+                });
+
+                fetchClaimedDonations();
+            } else {
+                alert(data.message || "Invalid OTP");
             }
-
-            alert("OTP verified successfully");
-
-            setOtpInputs((prev) => ({
-                ...prev,
-                [donationId]: ""
-            }));
-
-            fetchClaimedDonations();
         } catch (error) {
             console.error("Verify OTP error:", error);
-            alert("Server error");
+            alert("Something went wrong while verifying OTP");
         }
     };
 
-    const markAsDistributed = async (donationId) => {
-        try {
-            const token = localStorage.getItem("token");
+    // ================= DISTRIBUTION PROOF FILE =================
 
+    const handleDistributionProofChange = (donationId, file) => {
+        if (!file) {
+            return;
+        }
+
+        if (!file.type.startsWith("image/")) {
+            alert("Please select an image file only");
+            return;
+        }
+
+        if (file.size > 5 * 1024 * 1024) {
+            alert("Image size must be less than 5MB");
+            return;
+        }
+
+        setDistributionProofs((prev) => ({
+            ...prev,
+            [donationId]: file,
+        }));
+    };
+
+    // ================= UPLOAD DISTRIBUTION PROOF =================
+
+    const uploadDistributionProof = async (donationId) => {
+        const file = distributionProofs[donationId];
+
+        if (!file) {
+            alert("Please select a distribution proof image first");
+            return;
+        }
+
+        try {
+            setUploadingProofs((prev) => ({
+                ...prev,
+                [donationId]: true,
+            }));
+
+            const formData = new FormData();
+
+            formData.append("volunteerProofImage", file);
+
+            const response = await fetch(
+                `${API_URL}/api/donations/${donationId}/distribution-proof`,
+                {
+                    method: "POST",
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    },
+                    body: formData,
+                }
+            );
+
+            const data = await response.json();
+
+            if (response.ok) {
+                alert(
+                    "Distribution proof uploaded successfully!"
+                );
+
+                setDistributionProofs((prev) => {
+                    const updated = { ...prev };
+                    delete updated[donationId];
+                    return updated;
+                });
+
+                fetchClaimedDonations();
+            } else {
+                alert(
+                    data.message ||
+                    "Failed to upload distribution proof"
+                );
+            }
+        } catch (error) {
+            console.error(
+                "Distribution proof upload error:",
+                error
+            );
+
+            alert(
+                "Something went wrong while uploading proof"
+            );
+        } finally {
+            setUploadingProofs((prev) => ({
+                ...prev,
+                [donationId]: false,
+            }));
+        }
+    };
+
+    // ================= MARK DISTRIBUTED =================
+
+    const markAsDistributed = async (donationId) => {
+        const donation = claimedDonations.find(
+            (item) => item._id === donationId
+        );
+
+        if (!donation?.volunteerProofImage) {
+            alert(
+                "Please upload distribution proof before marking as distributed"
+            );
+            return;
+        }
+
+        try {
             const response = await fetch(
                 `${API_URL}/api/donations/${donationId}/distribute`,
                 {
                     method: "PUT",
                     headers: {
-                        Authorization: `Bearer ${token}`
-                    }
+                        Authorization: `Bearer ${token}`,
+                    },
                 }
             );
 
             const data = await response.json();
 
-            if (!response.ok) {
-                alert(data.message);
-                return;
+            if (response.ok) {
+                alert(
+                    "Donation marked as distributed successfully!"
+                );
+
+                fetchClaimedDonations();
+            } else {
+                alert(
+                    data.message ||
+                    "Failed to mark donation as distributed"
+                );
             }
-
-            alert("Donation marked as distributed");
-
-            fetchClaimedDonations();
         } catch (error) {
-            console.error("Distribute donation error:", error);
-            alert("Server error");
+            console.error("Distribution error:", error);
+
+            alert(
+                "Something went wrong while updating donation"
+            );
         }
     };
+
+    // ================= INITIAL FETCH =================
 
     useEffect(() => {
         fetchDonations();
         fetchClaimedDonations();
     }, []);
 
-    const statusStyle = (status) => {
-        if (status === "available") {
-            return {
-                backgroundColor: "#e8f5e9",
-                color: "#198754"
-            };
-        }
-
-        if (status === "claimed") {
-            return {
-                backgroundColor: "#fff3cd",
-                color: "#856404"
-            };
-        }
-
-        if (status === "picked") {
-            return {
-                backgroundColor: "#e3f2fd",
-                color: "#1565c0"
-            };
-        }
-
-        if (status === "distributed") {
-            return {
-                backgroundColor: "#f3e5f5",
-                color: "#7b1fa2"
-            };
-        }
-
-        return {
-            backgroundColor: "#eeeeee",
-            color: "#555"
-        };
-    };
-
-    const getFreshness = (bestBefore) => {
-        if (!bestBefore) {
-            return {
-                text: "No expiry time",
-                backgroundColor: "#eeeeee",
-                color: "#555"
-            };
-        }
-
-        const now = new Date();
-        const expiry = new Date(bestBefore);
-
-        const difference = expiry - now;
-        const hours = difference / (1000 * 60 * 60);
-
-        if (difference <= 0) {
-            return {
-                text: "Expired",
-                backgroundColor: "#ffebee",
-                color: "#c62828"
-            };
-        }
-
-        if (hours <= 6) {
-            return {
-                text: "Urgent - Expires Soon",
-                backgroundColor: "#ffebee",
-                color: "#c62828"
-            };
-        }
-
-        if (hours <= 24) {
-            return {
-                text: "Expiring Within 24 Hours",
-                backgroundColor: "#fff3cd",
-                color: "#856404"
-            };
-        }
-
-        return {
-            text: "Fresh",
-            backgroundColor: "#e8f5e9",
-            color: "#198754"
-        };
-    };
+    // ================= SEARCH + FILTER =================
 
     const filteredDonations = donations.filter((donation) => {
-        const searchText = search.trim().toLowerCase();
-
-        const foodType = String(
-            donation.foodType || ""
-        ).toLowerCase();
-
-        const pickupAddress = String(
-            donation.pickupAddress || ""
-        ).toLowerCase();
-
         const matchesSearch =
-            searchText === "" ||
-            foodType.includes(searchText) ||
-            pickupAddress.includes(searchText);
+            donation.foodType
+                ?.toLowerCase()
+                .includes(search.toLowerCase()) ||
+            donation.pickupAddress
+                ?.toLowerCase()
+                .includes(search.toLowerCase());
 
         const matchesFilter =
-            filter === "all" ||
-            donation.status === filter;
+            filter === "all" || donation.unit === filter;
 
         return matchesSearch && matchesFilter;
     });
 
-    return (
-        <div
-            style={{
-                minHeight: "100vh",
-                width: "100%",
-                background:
-                    "linear-gradient(135deg, #f1f8f3, #e8f5e9)",
-                fontFamily: "Arial, sans-serif"
-            }}
-        >
-            {/* Header */}
+    // ================= STYLES =================
 
-            <header
-                style={{
-                    width: "100%",
-                    backgroundColor: "#ffffff",
-                    padding: "18px 4%",
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    boxShadow:
-                        "0 2px 10px rgba(0,0,0,0.08)",
-                    boxSizing: "border-box"
-                }}
-            >
+    const pageStyle = {
+        minHeight: "100vh",
+        background: "linear-gradient(135deg, #f1f8f3, #e8f5e9)",
+        fontFamily: "Arial, sans-serif",
+        color: "#333",
+    };
+
+    const headerStyle = {
+        background: "#198754",
+        color: "white",
+        padding: "18px 40px",
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        boxShadow: "0 3px 10px rgba(0,0,0,0.12)",
+    };
+
+    const containerStyle = {
+        maxWidth: "1200px",
+        margin: "0 auto",
+        padding: "35px 25px",
+    };
+
+    const cardStyle = {
+        background: "white",
+        borderRadius: "16px",
+        padding: "24px",
+        boxShadow: "0 5px 18px rgba(0,0,0,0.08)",
+        border: "1px solid #e5e7eb",
+    };
+
+    const sectionTitleStyle = {
+        fontSize: "26px",
+        fontWeight: "700",
+        color: "#263238",
+        marginBottom: "20px",
+    };
+
+    const inputStyle = {
+        width: "100%",
+        padding: "13px 15px",
+        border: "1px solid #d1d5db",
+        borderRadius: "9px",
+        fontSize: "15px",
+        outline: "none",
+        boxSizing: "border-box",
+    };
+
+    const buttonStyle = {
+        width: "100%",
+        padding: "13px",
+        border: "none",
+        borderRadius: "9px",
+        background: "#198754",
+        color: "white",
+        fontSize: "15px",
+        fontWeight: "600",
+        cursor: "pointer",
+    };
+
+    const infoTextStyle = {
+        color: "#5f6368",
+        fontSize: "15px",
+        lineHeight: "1.6",
+    };
+
+    // ================= UI =================
+
+    return (
+        <div style={pageStyle}>
+
+            {/* HEADER */}
+
+            <header style={headerStyle}>
                 <div>
-                    <h2
+                    <div
                         style={{
-                            margin: 0,
-                            color: "#198754",
-                            fontSize: "26px"
+                            fontSize: "25px",
+                            fontWeight: "700",
                         }}
                     >
                         🍲 FoodShare
-                    </h2>
+                    </div>
 
-                    <p
+                    <div
                         style={{
-                            margin: "4px 0 0",
-                            color: "#777",
-                            fontSize: "13px"
+                            fontSize: "13px",
+                            opacity: "0.9",
+                            marginTop: "3px",
                         }}
                     >
                         Volunteer Dashboard
-                    </p>
+                    </div>
                 </div>
 
-                <button
-                    onClick={onLogout}
-                    style={{
-                        padding: "10px 20px",
-                        border: "none",
-                        borderRadius: "8px",
-                        backgroundColor: "#198754",
-                        color: "#ffffff",
-                        fontWeight: "bold",
-                        cursor: "pointer"
-                    }}
-                >
-                    Logout
-                </button>
+                {onLogout && (
+                    <button
+                        onClick={onLogout}
+                        style={{
+                            background: "white",
+                            color: "#198754",
+                            border: "none",
+                            padding: "9px 18px",
+                            borderRadius: "8px",
+                            fontWeight: "600",
+                            cursor: "pointer",
+                        }}
+                    >
+                        Logout
+                    </button>
+                )}
             </header>
 
-            {/* Main */}
+            <div style={containerStyle}>
 
-            <main
-                style={{
-                    width: "100%",
-                    padding: "45px 4%",
-                    boxSizing: "border-box"
-                }}
-            >
-                {/* Welcome */}
+                {/* WELCOME */}
 
-                <section
+                <div
                     style={{
-                        backgroundColor: "#ffffff",
-                        borderRadius: "18px",
-                        padding: "35px",
-                        marginBottom: "35px",
-                        boxShadow:
-                            "0 6px 20px rgba(52,78,65,0.08)"
+                        ...cardStyle,
+                        marginBottom: "28px",
+                        background:
+                            "linear-gradient(135deg, #ffffff, #f7fff9)",
                     }}
                 >
                     <h1
                         style={{
-                            margin: "0 0 10px",
-                            color: "#344e41",
-                            fontSize: "34px"
+                            margin: "0 0 8px",
+                            fontSize: "30px",
+                            color: "#198754",
                         }}
                     >
-                        Welcome, Volunteer! 🤝
+                        Welcome, Volunteer! 👋
                     </h1>
 
                     <p
                         style={{
                             margin: 0,
-                            color: "#777",
-                            fontSize: "16px"
+                            ...infoTextStyle,
                         }}
                     >
-                        Help collect and distribute food to
-                        people who need it.
+                        Find available food donations, claim them,
+                        coordinate pickups and help distribute food
+                        to people in need.
                     </p>
-                </section>
+                </div>
 
-                {/* Available Donations */}
+                {/* SEARCH + FILTER */}
 
-                <section style={{ marginBottom: "45px" }}>
+                <div
+                    style={{
+                        ...cardStyle,
+                        marginBottom: "35px",
+                    }}
+                >
                     <div
                         style={{
-                            display: "flex",
-                            justifyContent: "space-between",
-                            alignItems: "center",
-                            marginBottom: "20px",
-                            flexWrap: "wrap",
-                            gap: "15px"
-                        }}
-                    >
-                        <div>
-                            <h2
-                                style={{
-                                    margin: 0,
-                                    color: "#344e41",
-                                    fontSize: "27px"
-                                }}
-                            >
-                                Available Donations 🍱
-                            </h2>
-
-                            <p
-                                style={{
-                                    marginTop: "6px",
-                                    color: "#777"
-                                }}
-                            >
-                                Food donations waiting to be
-                                collected.
-                            </p>
-                        </div>
-
-                        <div
-                            style={{
-                                backgroundColor: "#ffffff",
-                                padding: "10px 18px",
-                                borderRadius: "10px",
-                                color: "#198754",
-                                fontWeight: "bold",
-                                boxShadow:
-                                    "0 3px 10px rgba(0,0,0,0.06)"
-                            }}
-                        >
-                            {filteredDonations.length} Available
-                        </div>
-                    </div>
-
-                    {/* Search */}
-
-                    <div
-                        style={{
-                            backgroundColor: "#ffffff",
-                            padding: "18px",
-                            borderRadius: "14px",
-                            marginBottom: "25px",
-                            display: "flex",
+                            display: "grid",
+                            gridTemplateColumns:
+                                "minmax(0, 1fr) 200px",
                             gap: "15px",
-                            flexWrap: "wrap",
-                            boxShadow:
-                                "0 4px 12px rgba(0,0,0,0.05)"
                         }}
                     >
                         <input
                             type="text"
-                            placeholder="🔎 Search food or pickup address..."
+                            placeholder="🔍 Search food or pickup location..."
                             value={search}
                             onChange={(e) =>
                                 setSearch(e.target.value)
                             }
-                            style={{
-                                flex: 1,
-                                minWidth: "250px",
-                                padding: "13px 15px",
-                                border:
-                                    "1px solid #dfe7e1",
-                                borderRadius: "9px",
-                                fontSize: "14px",
-                                outline: "none",
-                                boxSizing: "border-box"
-                            }}
+                            style={inputStyle}
                         />
 
                         <select
@@ -512,77 +506,80 @@ function VolunteerDashboard({ onLogout }) {
                             onChange={(e) =>
                                 setFilter(e.target.value)
                             }
-                            style={{
-                                padding: "13px 18px",
-                                border:
-                                    "1px solid #dfe7e1",
-                                borderRadius: "9px",
-                                fontSize: "14px",
-                                backgroundColor:
-                                    "#ffffff",
-                                cursor: "pointer"
-                            }}
+                            style={inputStyle}
                         >
                             <option value="all">
-                                All Donations
+                                All Units
                             </option>
 
-                            <option value="available">
-                                Available
+                            <option value="kg">
+                                kg
+                            </option>
+
+                            <option value="litre">
+                                litre
+                            </option>
+
+                            <option value="pieces">
+                                pieces
+                            </option>
+
+                            <option value="packets">
+                                packets
                             </option>
                         </select>
                     </div>
+                </div>
 
-                    {/* Donations */}
+                {/* AVAILABLE DONATIONS */}
+
+                <section style={{ marginBottom: "45px" }}>
+
+                    <h2 style={sectionTitleStyle}>
+                        Available Donations
+                    </h2>
 
                     {loading ? (
                         <div
                             style={{
-                                backgroundColor: "#ffffff",
-                                padding: "40px",
-                                borderRadius: "15px",
-                                textAlign: "center"
+                                ...cardStyle,
+                                textAlign: "center",
+                                padding: "45px",
                             }}
                         >
-                            Loading donations...
+                            <p style={infoTextStyle}>
+                                Loading donations...
+                            </p>
                         </div>
                     ) : filteredDonations.length === 0 ? (
                         <div
                             style={{
-                                backgroundColor: "#ffffff",
-                                padding: "55px 20px",
-                                borderRadius: "18px",
+                                ...cardStyle,
                                 textAlign: "center",
-                                boxShadow:
-                                    "0 5px 18px rgba(0,0,0,0.06)"
+                                padding: "45px",
                             }}
                         >
                             <div
                                 style={{
-                                    fontSize: "55px",
-                                    marginBottom: "15px"
+                                    fontSize: "45px",
+                                    marginBottom: "10px",
                                 }}
                             >
-                                🔎
+                                🍽️
                             </div>
 
                             <h3
                                 style={{
-                                    margin: "0 0 10px",
-                                    color: "#344e41"
+                                    margin: "0 0 8px",
+                                    color: "#374151",
                                 }}
                             >
-                                No matching donations
+                                No Available Donations
                             </h3>
 
-                            <p
-                                style={{
-                                    color: "#888",
-                                    margin: 0
-                                }}
-                            >
-                                Try another food name or
-                                pickup address.
+                            <p style={infoTextStyle}>
+                                There are currently no donations
+                                matching your search.
                             </p>
                         </div>
                     ) : (
@@ -591,277 +588,191 @@ function VolunteerDashboard({ onLogout }) {
                                 display: "grid",
                                 gridTemplateColumns:
                                     "repeat(auto-fit, minmax(300px, 1fr))",
-                                gap: "24px"
+                                gap: "22px",
                             }}
                         >
-                            {filteredDonations.map(
-                                (donation) => {
-                                    const freshness =
-                                        getFreshness(
-                                            donation.bestBefore
-                                        );
+                            {filteredDonations.map((donation) => (
+                                <div
+                                    key={donation._id}
+                                    style={cardStyle}
+                                >
 
-                                    return (
-                                        <div
-                                            key={
-                                                donation._id
-                                            }
+                                    <div
+                                        style={{
+                                            display: "flex",
+                                            justifyContent:
+                                                "space-between",
+                                            alignItems:
+                                                "flex-start",
+                                            gap: "10px",
+                                            marginBottom: "18px",
+                                        }}
+                                    >
+                                        <h3
                                             style={{
-                                                backgroundColor:
-                                                    "#ffffff",
-                                                borderRadius:
-                                                    "16px",
-                                                padding:
-                                                    "25px",
-                                                boxShadow:
-                                                    "0 6px 18px rgba(0,0,0,0.07)"
+                                                margin: 0,
+                                                fontSize: "21px",
+                                                color: "#263238",
                                             }}
                                         >
+                                            {donation.foodType}
+                                        </h3>
+
+                                        <span
+                                            style={{
+                                                background:
+                                                    "#d1fae5",
+                                                color:
+                                                    "#047857",
+                                                padding:
+                                                    "6px 11px",
+                                                borderRadius:
+                                                    "20px",
+                                                fontSize:
+                                                    "12px",
+                                                fontWeight:
+                                                    "600",
+                                                whiteSpace:
+                                                    "nowrap",
+                                            }}
+                                        >
+                                            Available
+                                        </span>
+                                    </div>
+
+                                    <div
+                                        style={{
+                                            ...infoTextStyle,
+                                            marginBottom: "20px",
+                                        }}
+                                    >
+                                        <p>
+                                            <strong>
+                                                Quantity:
+                                            </strong>{" "}
+                                            {donation.quantity}{" "}
+                                            {donation.unit}
+                                        </p>
+
+                                        <p>
+                                            <strong>
+                                                Best Before:
+                                            </strong>{" "}
+                                            {donation.bestBefore
+                                                ? new Date(
+                                                    donation.bestBefore
+                                                ).toLocaleString()
+                                                : "N/A"}
+                                        </p>
+
+                                        <p>
+                                            <strong>
+                                                Pickup Address:
+                                            </strong>{" "}
+                                            {donation.pickupAddress}
+                                        </p>
+
+                                        {/* DONOR PROOF IMAGE */}
+
+                                        {donation.donorProofImage && (
                                             <div
                                                 style={{
-                                                    display:
-                                                        "flex",
-                                                    justifyContent:
-                                                        "space-between",
-                                                    alignItems:
-                                                        "flex-start",
-                                                    gap: "10px"
-                                                }}
-                                            >
-                                                <h3
-                                                    style={{
-                                                        margin:
-                                                            "0 0 18px",
-                                                        color:
-                                                            "#344e41",
-                                                        fontSize:
-                                                            "21px"
-                                                    }}
-                                                >
-                                                    🍲{" "}
-                                                    {
-                                                        donation.foodType
-                                                    }
-                                                </h3>
-
-                                                <span
-                                                    style={{
-                                                        ...statusStyle(
-                                                            donation.status
-                                                        ),
-                                                        padding:
-                                                            "6px 10px",
-                                                        borderRadius:
-                                                            "20px",
-                                                        fontSize:
-                                                            "12px",
-                                                        fontWeight:
-                                                            "bold",
-                                                        textTransform:
-                                                            "capitalize"
-                                                    }}
-                                                >
-                                                    {
-                                                        donation.status
-                                                    }
-                                                </span>
-                                            </div>
-
-                                            <div
-                                                style={{
-                                                    padding:
+                                                    marginTop:
                                                         "15px",
-                                                    backgroundColor:
-                                                        "#f8faf8",
-                                                    borderRadius:
-                                                        "10px",
-                                                    marginBottom:
-                                                        "15px"
                                                 }}
                                             >
-                                                <p
-                                                    style={{
-                                                        margin:
-                                                            "0 0 10px",
-                                                        color:
-                                                            "#555"
-                                                    }}
-                                                >
-                                                    📦{" "}
-                                                    <strong>
-                                                        Quantity:
-                                                    </strong>{" "}
-                                                    {
-                                                        donation.quantity
-                                                    }{" "}
-                                                    {
-                                                        donation.unit
+                                                <strong>
+                                                    📷 Food Proof:
+                                                </strong>
+
+                                                <img
+                                                    src={
+                                                        donation.donorProofImage
                                                     }
-                                                </p>
-
-                                                <p
+                                                    alt="Food donation proof"
                                                     style={{
-                                                        margin:
-                                                            "0 0 10px",
-                                                        color:
-                                                            "#555",
-                                                        lineHeight:
-                                                            "1.5"
+                                                        width:
+                                                            "100%",
+                                                        maxHeight:
+                                                            "220px",
+                                                        objectFit:
+                                                            "cover",
+                                                        borderRadius:
+                                                            "10px",
+                                                        marginTop:
+                                                            "8px",
+                                                        border:
+                                                            "1px solid #e5e7eb",
                                                     }}
-                                                >
-                                                    📍{" "}
-                                                    <strong>
-                                                        Pickup:
-                                                    </strong>{" "}
-                                                    {
-                                                        donation.pickupAddress
-                                                    }
-                                                </p>
-
-                                                <p
-                                                    style={{
-                                                        margin: 0,
-                                                        color:
-                                                            "#555",
-                                                        lineHeight:
-                                                            "1.5"
-                                                    }}
-                                                >
-                                                    ⏰{" "}
-                                                    <strong>
-                                                        Best
-                                                        Before:
-                                                    </strong>{" "}
-                                                    {donation.bestBefore
-                                                        ? new Date(
-                                                              donation.bestBefore
-                                                          ).toLocaleString()
-                                                        : "Not specified"}
-                                                </p>
+                                                />
                                             </div>
+                                        )}
+                                    </div>
 
-                                            {/* Freshness */}
-
-                                            <div
-                                                style={{
-                                                    padding:
-                                                        "9px 12px",
-                                                    borderRadius:
-                                                        "8px",
-                                                    backgroundColor:
-                                                        freshness.backgroundColor,
-                                                    color:
-                                                        freshness.color,
-                                                    fontSize:
-                                                        "13px",
-                                                    fontWeight:
-                                                        "bold",
-                                                    marginBottom:
-                                                        "15px"
-                                                }}
-                                            >
-                                                {freshness.text}
-                                            </div>
-
-                                            <button
-                                                onClick={() =>
-                                                    claimDonation(
-                                                        donation._id
-                                                    )
-                                                }
-                                                style={{
-                                                    width: "100%",
-                                                    padding:
-                                                        "13px",
-                                                    border: "none",
-                                                    borderRadius:
-                                                        "9px",
-                                                    backgroundColor:
-                                                        "#198754",
-                                                    color:
-                                                        "#ffffff",
-                                                    fontWeight:
-                                                        "bold",
-                                                    fontSize:
-                                                        "14px",
-                                                    cursor:
-                                                        "pointer"
-                                                }}
-                                            >
-                                                Claim Donation
-                                            </button>
-                                        </div>
-                                    );
-                                }
-                            )}
+                                    <button
+                                        onClick={() =>
+                                            claimDonation(
+                                                donation._id
+                                            )
+                                        }
+                                        style={buttonStyle}
+                                    >
+                                        🤝 Claim Donation
+                                    </button>
+                                </div>
+                            ))}
                         </div>
                     )}
                 </section>
 
-                {/* Claimed Donations */}
+                {/* MY CLAIMED DONATIONS */}
 
                 <section>
-                    <div
-                        style={{
-                            marginBottom: "20px"
-                        }}
-                    >
-                        <h2
-                            style={{
-                                margin: 0,
-                                color: "#344e41",
-                                fontSize: "27px"
-                            }}
-                        >
-                            My Claimed Donations 📦
-                        </h2>
 
-                        <p
-                            style={{
-                                marginTop: "6px",
-                                color: "#777"
-                            }}
-                        >
-                            Manage the donations you have
-                            claimed.
-                        </p>
-                    </div>
+                    <h2 style={sectionTitleStyle}>
+                        My Claimed Donations
+                    </h2>
 
                     {claimedLoading ? (
                         <div
                             style={{
-                                backgroundColor: "#ffffff",
-                                padding: "40px",
-                                borderRadius: "15px",
-                                textAlign: "center"
+                                ...cardStyle,
+                                textAlign: "center",
+                                padding: "45px",
                             }}
                         >
-                            Loading claimed donations...
+                            <p style={infoTextStyle}>
+                                Loading claimed donations...
+                            </p>
                         </div>
                     ) : claimedDonations.length === 0 ? (
                         <div
                             style={{
-                                backgroundColor: "#ffffff",
+                                ...cardStyle,
+                                textAlign: "center",
                                 padding: "45px",
-                                borderRadius: "18px",
-                                textAlign: "center"
                             }}
                         >
                             <div
                                 style={{
-                                    fontSize: "45px"
+                                    fontSize: "45px",
+                                    marginBottom: "10px",
                                 }}
                             >
                                 📦
                             </div>
 
-                            <p
+                            <h3
                                 style={{
-                                    color: "#777"
+                                    margin: "0 0 8px",
+                                    color: "#374151",
                                 }}
                             >
-                                You haven't claimed any
-                                donations yet.
+                                No Claimed Donations
+                            </h3>
+
+                            <p style={infoTextStyle}>
+                                You have not claimed any donations yet.
                             </p>
                         </div>
                     ) : (
@@ -869,182 +780,206 @@ function VolunteerDashboard({ onLogout }) {
                             style={{
                                 display: "grid",
                                 gridTemplateColumns:
-                                    "repeat(auto-fit, minmax(320px, 1fr))",
-                                gap: "22px"
+                                    "repeat(auto-fit, minmax(330px, 1fr))",
+                                gap: "22px",
                             }}
                         >
-                            {claimedDonations.map(
-                                (donation) => (
+                            {claimedDonations.map((donation) => {
+
+                                let statusBackground = "#f3f4f6";
+                                let statusColor = "#374151";
+
+                                if (donation.status === "claimed") {
+                                    statusBackground = "#fef3c7";
+                                    statusColor = "#b45309";
+                                } else if (
+                                    donation.status === "picked"
+                                ) {
+                                    statusBackground = "#dbeafe";
+                                    statusColor = "#1d4ed8";
+                                } else if (
+                                    donation.status === "distributed"
+                                ) {
+                                    statusBackground = "#d1fae5";
+                                    statusColor = "#047857";
+                                }
+
+                                const selectedProof =
+                                    distributionProofs[
+                                        donation._id
+                                    ];
+
+                                const isUploading =
+                                    uploadingProofs[
+                                        donation._id
+                                    ];
+
+                                const proofUploaded =
+                                    Boolean(
+                                        donation.volunteerProofImage
+                                    );
+
+                                return (
                                     <div
-                                        key={
-                                            donation._id
-                                        }
-                                        style={{
-                                            backgroundColor:
-                                                "#ffffff",
-                                            borderRadius:
-                                                "16px",
-                                            padding: "25px",
-                                            boxShadow:
-                                                "0 6px 18px rgba(0,0,0,0.07)"
-                                        }}
+                                        key={donation._id}
+                                        style={cardStyle}
                                     >
+
+                                        {/* CARD HEADER */}
+
                                         <div
                                             style={{
-                                                display:
-                                                    "flex",
+                                                display: "flex",
                                                 justifyContent:
                                                     "space-between",
                                                 alignItems:
                                                     "flex-start",
-                                                gap: "10px"
+                                                gap: "10px",
+                                                marginBottom:
+                                                    "18px",
                                             }}
                                         >
                                             <h3
                                                 style={{
-                                                    margin:
-                                                        "0 0 18px",
-                                                    color:
-                                                        "#344e41",
+                                                    margin: 0,
                                                     fontSize:
-                                                        "21px"
+                                                        "21px",
+                                                    color:
+                                                        "#263238",
                                                 }}
                                             >
-                                                🍲{" "}
-                                                {
-                                                    donation.foodType
-                                                }
+                                                {donation.foodType}
                                             </h3>
 
                                             <span
                                                 style={{
-                                                    ...statusStyle(
-                                                        donation.status
-                                                    ),
+                                                    background:
+                                                        statusBackground,
+                                                    color:
+                                                        statusColor,
                                                     padding:
-                                                        "6px 10px",
+                                                        "6px 11px",
                                                     borderRadius:
                                                         "20px",
                                                     fontSize:
                                                         "12px",
                                                     fontWeight:
-                                                        "bold",
+                                                        "700",
                                                     textTransform:
-                                                        "capitalize"
+                                                        "capitalize",
                                                 }}
                                             >
-                                                {
-                                                    donation.status
-                                                }
+                                                {donation.status}
                                             </span>
                                         </div>
 
+                                        {/* DETAILS */}
+
                                         <div
                                             style={{
-                                                padding:
-                                                    "15px",
-                                                backgroundColor:
-                                                    "#f8faf8",
-                                                borderRadius:
-                                                    "10px",
-                                                marginBottom:
-                                                    "15px"
+                                                ...infoTextStyle,
+                                                borderBottom:
+                                                    "1px solid #eee",
+                                                paddingBottom:
+                                                    "16px",
                                             }}
                                         >
-                                            <p
-                                                style={{
-                                                    margin:
-                                                        "0 0 10px",
-                                                    color:
-                                                        "#555"
-                                                }}
-                                            >
-                                                📦{" "}
+                                            <p>
                                                 <strong>
                                                     Quantity:
                                                 </strong>{" "}
-                                                {
-                                                    donation.quantity
-                                                }{" "}
-                                                {
-                                                    donation.unit
-                                                }
+                                                {donation.quantity}{" "}
+                                                {donation.unit}
                                             </p>
 
-                                            <p
-                                                style={{
-                                                    margin: 0,
-                                                    color:
-                                                        "#555"
-                                                }}
-                                            >
-                                                📍{" "}
+                                            <p>
                                                 <strong>
-                                                    Pickup:
+                                                    Pickup Address:
                                                 </strong>{" "}
-                                                {
-                                                    donation.pickupAddress
-                                                }
+                                                {donation.pickupAddress}
                                             </p>
-                                        </div>
 
-                                        <p
-                                            style={{
-                                                color:
-                                                    "#555"
-                                            }}
-                                        >
-                                            OTP Verified:{" "}
-                                            <strong>
+                                            <p>
+                                                <strong>
+                                                    OTP Verified:
+                                                </strong>{" "}
                                                 {donation.otpVerified
                                                     ? "Yes ✓"
                                                     : "No"}
-                                            </strong>
-                                        </p>
+                                            </p>
 
-                                        {donation.status ===
-                                            "claimed" &&
+                                            {/* DONOR PROOF IMAGE */}
+
+                                            {donation.donorProofImage && (
+                                                <div
+                                                    style={{
+                                                        marginTop:
+                                                            "15px",
+                                                    }}
+                                                >
+                                                    <strong>
+                                                        📷 Donor Food Proof:
+                                                    </strong>
+
+                                                    <img
+                                                        src={
+                                                            donation.donorProofImage
+                                                        }
+                                                        alt="Donor food proof"
+                                                        style={{
+                                                            width:
+                                                                "100%",
+                                                            maxHeight:
+                                                                "220px",
+                                                            objectFit:
+                                                                "cover",
+                                                            borderRadius:
+                                                                "10px",
+                                                            marginTop:
+                                                                "8px",
+                                                            border:
+                                                                "1px solid #e5e7eb",
+                                                        }}
+                                                    />
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* OTP VERIFICATION */}
+
+                                        {donation.status === "claimed" &&
                                             !donation.otpVerified && (
                                                 <div
                                                     style={{
                                                         marginTop:
                                                             "18px",
                                                         padding:
-                                                            "18px",
-                                                        backgroundColor:
-                                                            "#fffaf0",
+                                                            "17px",
+                                                        background:
+                                                            "#fffbeb",
+                                                        border:
+                                                            "1px solid #fde68a",
                                                         borderRadius:
-                                                            "10px"
+                                                            "11px",
                                                     }}
                                                 >
-                                                    <button
-                                                        onClick={() =>
-                                                            generateOTP(
-                                                                donation._id
-                                                            )
-                                                        }
+                                                    <p
                                                         style={{
-                                                            width:
-                                                                "100%",
-                                                            padding:
-                                                                "11px",
-                                                            border:
-                                                                "none",
-                                                            borderRadius:
-                                                                "8px",
-                                                            backgroundColor:
-                                                                "#198754",
+                                                            margin:
+                                                                "0 0 12px",
                                                             color:
-                                                                "#fff",
-                                                            fontWeight:
-                                                                "bold",
-                                                            cursor:
-                                                                "pointer"
+                                                                "#92400e",
+                                                            fontSize:
+                                                                "14px",
+                                                            lineHeight:
+                                                                "1.5",
                                                         }}
                                                     >
-                                                        Generate
-                                                        OTP
-                                                    </button>
+                                                        🔐 Ask the donor
+                                                        for the 6-digit
+                                                        OTP and enter it
+                                                        below.
+                                                    </p>
 
                                                     <input
                                                         type="text"
@@ -1052,39 +987,29 @@ function VolunteerDashboard({ onLogout }) {
                                                         placeholder="Enter 6-digit OTP"
                                                         value={
                                                             otpInputs[
-                                                                donation
-                                                                    ._id
+                                                                donation._id
                                                             ] ||
                                                             ""
                                                         }
-                                                        onChange={(
-                                                            e
-                                                        ) =>
-                                                            setOtpInputs(
-                                                                (
-                                                                    prev
-                                                                ) => ({
-                                                                    ...prev,
-                                                                    [donation._id]:
-                                                                        e
-                                                                            .target
-                                                                            .value
-                                                                })
+                                                        onChange={(e) =>
+                                                            handleOtpChange(
+                                                                donation._id,
+                                                                e.target.value.replace(
+                                                                    /\D/g,
+                                                                    ""
+                                                                )
                                                             )
                                                         }
                                                         style={{
-                                                            width:
-                                                                "100%",
-                                                            padding:
-                                                                "11px",
-                                                            marginTop:
-                                                                "12px",
-                                                            border:
-                                                                "1px solid #ddd",
-                                                            borderRadius:
-                                                                "8px",
-                                                            boxSizing:
-                                                                "border-box"
+                                                            ...inputStyle,
+                                                            textAlign:
+                                                                "center",
+                                                            letterSpacing:
+                                                                "7px",
+                                                            fontSize:
+                                                                "19px",
+                                                            marginBottom:
+                                                                "10px",
                                                         }}
                                                     />
 
@@ -1095,111 +1020,408 @@ function VolunteerDashboard({ onLogout }) {
                                                             )
                                                         }
                                                         style={{
-                                                            width:
-                                                                "100%",
-                                                            padding:
-                                                                "11px",
-                                                            marginTop:
-                                                                "10px",
-                                                            border:
-                                                                "none",
-                                                            borderRadius:
-                                                                "8px",
-                                                            backgroundColor:
-                                                                "#1565c0",
-                                                            color:
-                                                                "#fff",
-                                                            fontWeight:
-                                                                "bold",
-                                                            cursor:
-                                                                "pointer"
+                                                            ...buttonStyle,
+                                                            background:
+                                                                "#198754",
                                                         }}
                                                     >
-                                                        Verify
-                                                        OTP
+                                                        ✓ Verify OTP
                                                     </button>
                                                 </div>
                                             )}
 
-                                        {donation.status ===
-                                            "picked" && (
-                                            <button
-                                                onClick={() =>
-                                                    markAsDistributed(
-                                                        donation._id
-                                                    )
-                                                }
-                                                style={{
-                                                    width:
-                                                        "100%",
-                                                    marginTop:
-                                                        "18px",
-                                                    padding:
-                                                        "13px",
-                                                    border:
-                                                        "none",
-                                                    borderRadius:
-                                                        "9px",
-                                                    backgroundColor:
-                                                        "#7b1fa2",
-                                                    color:
-                                                        "#ffffff",
-                                                    fontWeight:
-                                                        "bold",
-                                                    cursor:
-                                                        "pointer"
-                                                }}
-                                            >
-                                                ✓ Mark as
-                                                Distributed
-                                            </button>
-                                        )}
+                                        {/* PICKED */}
 
-                                        {donation.status ===
-                                            "distributed" && (
+                                        {donation.status === "picked" && (
                                             <div
                                                 style={{
                                                     marginTop:
                                                         "18px",
-                                                    padding:
-                                                        "12px",
-                                                    backgroundColor:
-                                                        "#f3e5f5",
-                                                    color:
-                                                        "#7b1fa2",
-                                                    borderRadius:
-                                                        "9px",
-                                                    textAlign:
-                                                        "center",
-                                                    fontWeight:
-                                                        "bold"
                                                 }}
                                             >
-                                                ✓ Successfully
-                                                Distributed
+
+                                                <div
+                                                    style={{
+                                                        background:
+                                                            "#eff6ff",
+                                                        border:
+                                                            "1px solid #bfdbfe",
+                                                        color:
+                                                            "#1d4ed8",
+                                                        borderRadius:
+                                                            "11px",
+                                                        padding:
+                                                            "16px",
+                                                        marginBottom:
+                                                            "15px",
+                                                    }}
+                                                >
+                                                    <p
+                                                        style={{
+                                                            margin:
+                                                                "0 0 5px",
+                                                            fontWeight:
+                                                                "700",
+                                                        }}
+                                                    >
+                                                        ✓ OTP Verified
+                                                    </p>
+
+                                                    <p
+                                                        style={{
+                                                            margin: 0,
+                                                            fontSize:
+                                                                "14px",
+                                                            lineHeight:
+                                                                "1.5",
+                                                        }}
+                                                    >
+                                                        Food has been
+                                                        picked up.
+                                                        Upload the
+                                                        distribution
+                                                        proof after
+                                                        delivering the
+                                                        food.
+                                                    </p>
+                                                </div>
+
+                                                {/* DISTRIBUTION PROOF UPLOAD */}
+
+                                                {!proofUploaded && (
+                                                    <div
+                                                        style={{
+                                                            background:
+                                                                "#f8fafc",
+                                                            border:
+                                                                "1px solid #cbd5e1",
+                                                            borderRadius:
+                                                                "11px",
+                                                            padding:
+                                                                "16px",
+                                                            marginBottom:
+                                                                "15px",
+                                                        }}
+                                                    >
+                                                        <p
+                                                            style={{
+                                                                margin:
+                                                                    "0 0 10px",
+                                                                fontWeight:
+                                                                    "700",
+                                                                color:
+                                                                    "#334155",
+                                                            }}
+                                                        >
+                                                            📷 Distribution
+                                                            Proof
+                                                        </p>
+
+                                                        <p
+                                                            style={{
+                                                                margin:
+                                                                    "0 0 12px",
+                                                                fontSize:
+                                                                    "13px",
+                                                                color:
+                                                                    "#64748b",
+                                                                lineHeight:
+                                                                    "1.5",
+                                                            }}
+                                                        >
+                                                            Upload a photo
+                                                            showing that
+                                                            the donated
+                                                            food has been
+                                                            delivered.
+                                                        </p>
+
+                                                        <input
+                                                            type="file"
+                                                            accept="image/*"
+                                                            onChange={(e) =>
+                                                                handleDistributionProofChange(
+                                                                    donation._id,
+                                                                    e.target
+                                                                        .files[0]
+                                                                )
+                                                            }
+                                                            style={{
+                                                                ...inputStyle,
+                                                                marginBottom:
+                                                                    "10px",
+                                                            }}
+                                                        />
+
+                                                        {selectedProof && (
+                                                            <div
+                                                                style={{
+                                                                    marginBottom:
+                                                                        "10px",
+                                                                    fontSize:
+                                                                        "13px",
+                                                                    color:
+                                                                        "#475569",
+                                                                }}
+                                                            >
+                                                                Selected:
+                                                                {" "}
+                                                                <strong>
+                                                                    {
+                                                                        selectedProof.name
+                                                                    }
+                                                                </strong>
+                                                            </div>
+                                                        )}
+
+                                                        <button
+                                                            onClick={() =>
+                                                                uploadDistributionProof(
+                                                                    donation._id
+                                                                )
+                                                            }
+                                                            disabled={
+                                                                !selectedProof ||
+                                                                isUploading
+                                                            }
+                                                            style={{
+                                                                ...buttonStyle,
+                                                                background:
+                                                                    selectedProof &&
+                                                                    !isUploading
+                                                                        ? "#0d6efd"
+                                                                        : "#94a3b8",
+                                                                cursor:
+                                                                    selectedProof &&
+                                                                    !isUploading
+                                                                        ? "pointer"
+                                                                        : "not-allowed",
+                                                            }}
+                                                        >
+                                                            {isUploading
+                                                                ? "Uploading..."
+                                                                : "📤 Upload Distribution Proof"}
+                                                        </button>
+                                                    </div>
+                                                )}
+
+                                                {/* UPLOADED PROOF */}
+
+                                                {proofUploaded && (
+                                                    <div
+                                                        style={{
+                                                            background:
+                                                                "#ecfdf5",
+                                                            border:
+                                                                "1px solid #a7f3d0",
+                                                            borderRadius:
+                                                                "11px",
+                                                            padding:
+                                                                "16px",
+                                                            marginBottom:
+                                                                "15px",
+                                                        }}
+                                                    >
+                                                        <p
+                                                            style={{
+                                                                margin:
+                                                                    "0 0 10px",
+                                                                fontWeight:
+                                                                    "700",
+                                                                color:
+                                                                    "#047857",
+                                                            }}
+                                                        >
+                                                            ✓ Distribution
+                                                            Proof Uploaded
+                                                        </p>
+
+                                                        <img
+                                                            src={
+                                                                donation.volunteerProofImage
+                                                            }
+                                                            alt="Distribution proof"
+                                                            style={{
+                                                                width:
+                                                                    "100%",
+                                                                maxHeight:
+                                                                    "220px",
+                                                                objectFit:
+                                                                    "cover",
+                                                                borderRadius:
+                                                                    "10px",
+                                                                border:
+                                                                    "1px solid #a7f3d0",
+                                                            }}
+                                                        />
+                                                    </div>
+                                                )}
+
+                                                {/* MARK AS DISTRIBUTED */}
+
+                                                <button
+                                                    onClick={() =>
+                                                        markAsDistributed(
+                                                            donation._id
+                                                        )
+                                                    }
+                                                    disabled={
+                                                        !proofUploaded
+                                                    }
+                                                    style={{
+                                                        ...buttonStyle,
+                                                        background:
+                                                            proofUploaded
+                                                                ? "#198754"
+                                                                : "#9ca3af",
+                                                        cursor:
+                                                            proofUploaded
+                                                                ? "pointer"
+                                                                : "not-allowed",
+                                                        opacity:
+                                                            proofUploaded
+                                                                ? 1
+                                                                : 0.7,
+                                                    }}
+                                                >
+                                                    📦 Mark as Distributed
+                                                </button>
+
+                                                {!proofUploaded && (
+                                                    <p
+                                                        style={{
+                                                            margin:
+                                                                "8px 0 0",
+                                                            textAlign:
+                                                                "center",
+                                                            fontSize:
+                                                                "12px",
+                                                            color:
+                                                                "#6b7280",
+                                                        }}
+                                                    >
+                                                        Upload distribution
+                                                        proof to enable this
+                                                        button.
+                                                    </p>
+                                                )}
                                             </div>
                                         )}
+
+                                        {/* DISTRIBUTED */}
+
+                                        {donation.status ===
+                                            "distributed" && (
+                                                <div
+                                                    style={{
+                                                        marginTop:
+                                                            "18px",
+                                                    }}
+                                                >
+
+                                                    <div
+                                                        style={{
+                                                            background:
+                                                                "#ecfdf5",
+                                                            border:
+                                                                "1px solid #a7f3d0",
+                                                            color:
+                                                                "#047857",
+                                                            borderRadius:
+                                                                "11px",
+                                                            padding:
+                                                                "16px",
+                                                        }}
+                                                    >
+                                                        <p
+                                                            style={{
+                                                                margin:
+                                                                    "0 0 5px",
+                                                                fontWeight:
+                                                                    "700",
+                                                            }}
+                                                        >
+                                                            ✓ Donation
+                                                            Distributed
+                                                        </p>
+
+                                                        <p
+                                                            style={{
+                                                                margin: 0,
+                                                                fontSize:
+                                                                    "14px",
+                                                                lineHeight:
+                                                                    "1.5",
+                                                            }}
+                                                        >
+                                                            This donation
+                                                            has been
+                                                            successfully
+                                                            distributed.
+                                                        </p>
+
+                                                        {/* VOLUNTEER PROOF */}
+
+                                                        {donation.volunteerProofImage && (
+                                                            <div
+                                                                style={{
+                                                                    marginTop:
+                                                                        "15px",
+                                                                }}
+                                                            >
+                                                                <strong>
+                                                                    📷 Distribution
+                                                                    Proof:
+                                                                </strong>
+
+                                                                <img
+                                                                    src={
+                                                                        donation.volunteerProofImage
+                                                                    }
+                                                                    alt="Distribution proof"
+                                                                    style={{
+                                                                        width:
+                                                                            "100%",
+                                                                        maxHeight:
+                                                                            "220px",
+                                                                        objectFit:
+                                                                            "cover",
+                                                                        borderRadius:
+                                                                            "10px",
+                                                                        marginTop:
+                                                                            "8px",
+                                                                        border:
+                                                                            "1px solid #a7f3d0",
+                                                                    }}
+                                                                />
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            )}
                                     </div>
-                                )
-                            )}
+                                );
+                            })}
                         </div>
                     )}
                 </section>
-            </main>
 
-            <footer
-                style={{
-                    width: "100%",
-                    textAlign: "center",
-                    padding: "25px",
-                    color: "#777",
-                    fontSize: "13px"
-                }}
-            >
-                Thank you for helping reduce food waste 🌱❤️
-            </footer>
+                {/* FOOTER */}
+
+                <div
+                    style={{
+                        textAlign: "center",
+                        marginTop: "50px",
+                        padding: "20px",
+                        color: "#6b7280",
+                        fontSize: "13px",
+                    }}
+                >
+                    FoodShare • Making a difference, one meal at a time ❤️
+                </div>
+            </div>
         </div>
     );
-}
+};
 
 export default VolunteerDashboard;

@@ -1,7 +1,8 @@
 import { useState } from "react";
+
 const API_URL = "https://food-donation-system-jzpj.onrender.com";
 
-function Login({ onLogin }) {
+function Login({ onLogin, onRegister }) {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
 
@@ -49,25 +50,58 @@ function Login({ onLogin }) {
                 display: "flex",
                 justifyContent: "center",
                 alignItems: "center",
+                position: "relative",
+                overflow: "hidden",
                 background:
-                    "linear-gradient(135deg, #e8f5e9, #f1f8e9)",
+                    "radial-gradient(circle at 15% 20%, rgba(52, 211, 153, 0.25), transparent 30%), radial-gradient(circle at 85% 80%, rgba(16, 185, 129, 0.2), transparent 30%), linear-gradient(135deg, #064e3b, #022c22)",
                 fontFamily: "Arial, sans-serif"
             }}
         >
+            {/* Background glowing shapes */}
             <div
                 style={{
+                    position: "absolute",
+                    width: "300px",
+                    height: "300px",
+                    borderRadius: "50%",
+                    background: "rgba(52, 211, 153, 0.12)",
+                    filter: "blur(50px)",
+                    top: "-80px",
+                    left: "-80px"
+                }}
+            />
+
+            <div
+                style={{
+                    position: "absolute",
+                    width: "350px",
+                    height: "350px",
+                    borderRadius: "50%",
+                    background: "rgba(16, 185, 129, 0.10)",
+                    filter: "blur(60px)",
+                    bottom: "-120px",
+                    right: "-100px"
+                }}
+            />
+
+            {/* Login Card */}
+            <div
+                style={{
+                    position: "relative",
+                    zIndex: 2,
                     width: "380px",
-                    backgroundColor: "#ffffff",
+                    backgroundColor: "#fffdf7",
                     padding: "40px",
-                    borderRadius: "18px",
-                    boxShadow: "0 8px 25px rgba(0,0,0,0.12)"
+                    borderRadius: "20px",
+                    boxShadow:
+                        "0 20px 60px rgba(0, 0, 0, 0.35)"
                 }}
             >
                 <div style={{ textAlign: "center" }}>
                     <div
                         style={{
-                            fontSize: "45px",
-                            marginBottom: "10px"
+                            fontSize: "42px",
+                            marginBottom: "8px"
                         }}
                     >
                         🍲
@@ -76,8 +110,9 @@ function Login({ onLogin }) {
                     <h1
                         style={{
                             margin: 0,
-                            color: "#198754",
-                            fontSize: "30px"
+                            color: "#047857",
+                            fontSize: "30px",
+                            fontWeight: "700"
                         }}
                     >
                         FoodShare
@@ -85,9 +120,9 @@ function Login({ onLogin }) {
 
                     <p
                         style={{
-                            color: "#777",
+                            color: "#6b7280",
                             marginTop: "8px",
-                            marginBottom: "30px"
+                            marginBottom: "28px"
                         }}
                     >
                         Share food. Spread kindness.
@@ -97,7 +132,7 @@ function Login({ onLogin }) {
                 <h2
                     style={{
                         textAlign: "center",
-                        color: "#333",
+                        color: "#1f2937",
                         marginBottom: "25px"
                     }}
                 >
@@ -109,8 +144,8 @@ function Login({ onLogin }) {
                         style={{
                             display: "block",
                             marginBottom: "7px",
-                            color: "#444",
-                            fontWeight: "bold"
+                            color: "#374151",
+                            fontWeight: "600"
                         }}
                     >
                         Email
@@ -127,10 +162,11 @@ function Login({ onLogin }) {
                             boxSizing: "border-box",
                             padding: "13px",
                             marginBottom: "18px",
-                            border: "1px solid #ccc",
-                            borderRadius: "8px",
+                            border: "1px solid #d1d5db",
+                            borderRadius: "9px",
                             fontSize: "15px",
-                            outline: "none"
+                            outline: "none",
+                            backgroundColor: "#ffffff"
                         }}
                     />
 
@@ -138,8 +174,8 @@ function Login({ onLogin }) {
                         style={{
                             display: "block",
                             marginBottom: "7px",
-                            color: "#444",
-                            fontWeight: "bold"
+                            color: "#374151",
+                            fontWeight: "600"
                         }}
                     >
                         Password
@@ -155,11 +191,12 @@ function Login({ onLogin }) {
                             width: "100%",
                             boxSizing: "border-box",
                             padding: "13px",
-                            marginBottom: "25px",
-                            border: "1px solid #ccc",
-                            borderRadius: "8px",
+                            marginBottom: "22px",
+                            border: "1px solid #d1d5db",
+                            borderRadius: "9px",
                             fontSize: "15px",
-                            outline: "none"
+                            outline: "none",
+                            backgroundColor: "#ffffff"
                         }}
                     />
 
@@ -169,24 +206,48 @@ function Login({ onLogin }) {
                             width: "100%",
                             padding: "13px",
                             border: "none",
-                            borderRadius: "8px",
-                            backgroundColor: "#198754",
+                            borderRadius: "9px",
+                            backgroundColor: "#047857",
                             color: "#ffffff",
                             fontSize: "16px",
                             fontWeight: "bold",
-                            cursor: "pointer"
+                            cursor: "pointer",
+                            boxShadow: "0 5px 15px rgba(4, 120, 87, 0.25)"
                         }}
                     >
                         Login
                     </button>
                 </form>
 
+                {/* Register Option */}
                 <p
                     style={{
                         textAlign: "center",
-                        marginTop: "25px",
-                        color: "#888",
+                        marginTop: "22px",
+                        marginBottom: "0",
+                        color: "#6b7280",
                         fontSize: "14px"
+                    }}
+                >
+                    Don't have an account?{" "}
+                    <span
+                        onClick={onRegister}
+                        style={{
+                            color: "#047857",
+                            fontWeight: "600",
+                            cursor: "pointer"
+                        }}
+                    >
+                        Register
+                    </span>
+                </p>
+
+                <p
+                    style={{
+                        textAlign: "center",
+                        marginTop: "18px",
+                        color: "#9ca3af",
+                        fontSize: "13px"
                     }}
                 >
                     Together we can reduce food waste ❤️

@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
+
 const API_URL = import.meta.env.VITE_API_URL;
 
 function CreateDonation({ onDonationCreated }) {
@@ -7,28 +8,36 @@ function CreateDonation({ onDonationCreated }) {
     const [unit, setUnit] = useState("kg");
     const [bestBefore, setBestBefore] = useState("");
     const [pickupAddress, setPickupAddress] = useState("");
+    const [proofImage, setProofImage] = useState(null);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
 
+        if (!proofImage) {
+            alert("Please upload a proof image");
+            return;
+        }
+
         try {
             const token = localStorage.getItem("token");
+
+            const formData = new FormData();
+
+            formData.append("foodType", foodType);
+            formData.append("quantity", Number(quantity));
+            formData.append("unit", unit);
+            formData.append("bestBefore", bestBefore);
+            formData.append("pickupAddress", pickupAddress);
+            formData.append("donorProofImage", proofImage);
 
             const response = await fetch(
                 `${API_URL}/api/donations`,
                 {
                     method: "POST",
                     headers: {
-                        "Content-Type": "application/json",
                         Authorization: `Bearer ${token}`
                     },
-                    body: JSON.stringify({
-                        foodType,
-                        quantity: Number(quantity),
-                        unit,
-                        bestBefore,
-                        pickupAddress
-                    })
+                    body: formData
                 }
             );
 
@@ -46,8 +55,10 @@ function CreateDonation({ onDonationCreated }) {
             setUnit("kg");
             setBestBefore("");
             setPickupAddress("");
+            setProofImage(null);
 
             onDonationCreated();
+
         } catch (error) {
             console.error("Donation error:", error);
             alert("Server error");
@@ -207,6 +218,38 @@ function CreateDonation({ onDonationCreated }) {
                             style={inputStyle}
                             required
                         />
+                    </div>
+
+                    <div
+                        style={{
+                            gridColumn: "1 / -1"
+                        }}
+                    >
+                        <label style={labelStyle}>
+                            📷 Food Proof Image
+                        </label>
+
+                        <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) =>
+                                setProofImage(e.target.files[0])
+                            }
+                            style={inputStyle}
+                            required
+                        />
+
+                        {proofImage && (
+                            <p
+                                style={{
+                                    marginTop: "8px",
+                                    color: "#198754",
+                                    fontSize: "13px"
+                                }}
+                            >
+                                ✓ {proofImage.name}
+                            </p>
+                        )}
                     </div>
                 </div>
 
