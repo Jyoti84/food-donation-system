@@ -65,7 +65,7 @@ function App() {
                     onRegister={() => setPage("register")}
                 />
             ) : (
-                <Register />
+                <Register onLogin={() => setPage("login")} />
             )}
         </div>
     );

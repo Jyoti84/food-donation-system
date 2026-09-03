@@ -1,7 +1,8 @@
 import { useState } from "react";
+
 const API_URL = import.meta.env.VITE_API_URL;
 
-function Register() {
+function Register({ onLogin }) {
     const [name, setName] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
@@ -30,12 +31,15 @@ function Register() {
             const data = await response.json();
 
             if (!response.ok) {
-                alert(data.message);
+                alert(data.message || "Registration failed");
                 return;
             }
 
-            console.log("Registration successful:", data);
-            alert("Registration successful");
+            alert("Registration successful! Please login.");
+
+            // Go back to Login page
+            onLogin();
+
         } catch (error) {
             console.error("Registration error:", error);
             alert("Server error");
