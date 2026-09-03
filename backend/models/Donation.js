@@ -7,7 +7,7 @@ const donationSchema = new mongoose.Schema(
             ref: "User",
             required: true
         },
-        
+
         claimedBy: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "User",
@@ -39,9 +39,27 @@ const donationSchema = new mongoose.Schema(
             required: true
         },
 
+        // Donor proof image
+        donorProofImage: {
+            type: String,
+            default: null
+        },
+
+        // Volunteer distribution proof image
+        volunteerProofImage: {
+            type: String,
+            default: null
+        },
+
         status: {
             type: String,
-            enum: ["available", "claimed", "picked", "distributed", "expired"],
+            enum: [
+                "available",
+                "claimed",
+                "picked",
+                "distributed",
+                "expired"
+            ],
             default: "available"
         },
 
@@ -53,8 +71,7 @@ const donationSchema = new mongoose.Schema(
         otpVerified: {
             type: Boolean,
             default: false
-        },
-
+        }
     },
     {
         timestamps: true

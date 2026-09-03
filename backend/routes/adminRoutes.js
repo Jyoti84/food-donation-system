@@ -8,10 +8,12 @@ const {
     getAllDonations
 } = require("../controllers/adminController");
 
-const { protect } = require("../middleware/authMiddleware");
+const { protect, adminOnly } = require("../middleware/authMiddleware");
 
-router.get("/users", protect, getAllUsers);
-router.get("/stats", protect, getStats);
-router.get("/donations", protect, getAllDonations);
+router.get("/users", protect, adminOnly, getAllUsers);
+
+router.get("/stats", protect, adminOnly, getStats);
+
+router.get("/donations", protect, adminOnly, getAllDonations);
 
 module.exports = router;
