@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import CreateDonation from "./CreateDonation";
 import "./DonorDashboard.css";
 
@@ -18,12 +18,25 @@ function DonorDashboard({ onLogout }) {
         bestBefore: "",
         pickupAddress: ""
     });
+
     const [editProofImage, setEditProofImage] = useState(null);
     const [updating, setUpdating] = useState(false);
     const [sidebarOpen, setSidebarOpen] = useState(false);
 
+    // Navbar dropdown states
+    const [notificationOpen, setNotificationOpen] = useState(false);
+    const [profileOpen, setProfileOpen] = useState(false);
+
+    // Tracks whether the current notifications have been viewed
+    const [notificationsSeen, setNotificationsSeen] = useState(false);
+
+    const notificationRef = useRef(null);
+    const profileRef = useRef(null);
+
     const fetchMyDonations = async () => {
         try {
+            setLoading(true);
+
             const token = localStorage.getItem("token");
 
             const response = await fetch(`${API_URL}/my-donations`, {
@@ -40,7 +53,7 @@ function DonorDashboard({ onLogout }) {
                 return;
             }
 
-            setDonations(data.donations);
+            setDonations(data.donations || []);
         } catch (error) {
             console.error("Fetch donations error:", error);
             alert("Server error");
@@ -51,6 +64,34 @@ function DonorDashboard({ onLogout }) {
 
     useEffect(() => {
         fetchMyDonations();
+    }, []);
+
+    // Close navbar dropdowns when clicking outside
+    useEffect(() => {
+        const handleOutsideClick = (event) => {
+            if (
+                notificationRef.current &&
+                !notificationRef.current.contains(event.target)
+            ) {
+                setNotificationOpen(false);
+            }
+
+            if (
+                profileRef.current &&
+                !profileRef.current.contains(event.target)
+            ) {
+                setProfileOpen(false);
+            }
+        };
+
+        document.addEventListener("mousedown", handleOutsideClick);
+
+        return () => {
+            document.removeEventListener(
+                "mousedown",
+                handleOutsideClick
+            );
+        };
     }, []);
 
     const handleDonationCreated = () => {
@@ -260,11 +301,15 @@ function DonorDashboard({ onLogout }) {
         }
 
         setSidebarOpen(false);
+        setNotificationOpen(false);
+        setProfileOpen(false);
     };
 
     const openCreateDonation = () => {
         setShowCreateDonation(true);
         setSidebarOpen(false);
+        setNotificationOpen(false);
+        setProfileOpen(false);
 
         setTimeout(() => {
             const element = document.getElementById(
@@ -349,10 +394,62 @@ function DonorDashboard({ onLogout }) {
         (donation) => donation.status === "distributed"
     ).length;
 
+    // Notifications based on current donor activity
+    const notifications = [];
+
+    if (availableDonations > 0) {
+        notifications.push({
+            id: "available",
+            icon: "🍱",
+            title: "Donations available",
+            message: `${availableDonations} donation${
+                availableDonations > 1 ? "s are" : " is"
+            } currently waiting for a volunteer.`
+        });
+    }
+
+    if (claimedDonations > 0) {
+        notifications.push({
+            id: "claimed",
+            icon: "🤝",
+            title: "Donation claimed",
+            message: `${claimedDonations} donation${
+                claimedDonations > 1 ? "s have" : " has"
+            } been claimed by a volunteer.`
+        });
+    }
+
+    if (distributedDonations > 0) {
+        notifications.push({
+            id: "distributed",
+            icon: "❤️",
+            title: "Food distributed",
+            message: `${distributedDonations} donation${
+                distributedDonations > 1 ? "s have" : " has"
+            } been successfully distributed.`
+        });
+    }
+
+    /*
+        Reset notification status whenever the actual
+        notification counts change.
+
+        This means if a new claimed/distributed/available
+        notification appears, the red dot comes back.
+    */
+    useEffect(() => {
+        if (notifications.length > 0) {
+            setNotificationsSeen(false);
+        }
+    }, [
+        availableDonations,
+        claimedDonations,
+        distributedDonations
+    ]);
+
     return (
         <div className="donor-dashboard">
 
-            {/* Mobile Overlay */}
             {sidebarOpen && (
                 <div
                     className="sidebar-overlay"
@@ -360,7 +457,6 @@ function DonorDashboard({ onLogout }) {
                 />
             )}
 
-            {/* Sidebar */}
             <aside
                 className={`donor-sidebar ${
                     sidebarOpen ? "sidebar-open" : ""
@@ -380,7 +476,9 @@ function DonorDashboard({ onLogout }) {
 
                     <button
                         className="sidebar-link active"
-                        onClick={() => scrollToSection("dashboard-top")}
+                        onClick={() =>
+                            scrollToSection("dashboard-top")
+                        }
                     >
                         <span>▣</span>
                         Dashboard
@@ -440,12 +538,12 @@ function DonorDashboard({ onLogout }) {
                 </div>
             </aside>
 
-            {/* Main Area */}
             <div className="donor-main">
 
-                {/* Top Navbar */}
                 <header className="dashboard-navbar">
+
                     <div className="navbar-left">
+
                         <button
                             className="mobile-menu-button"
                             onClick={() =>
@@ -462,35 +560,258 @@ function DonorDashboard({ onLogout }) {
 
                             <h1>Dashboard</h1>
                         </div>
+
                     </div>
 
                     <div className="navbar-right">
-                        <button className="notification-button">
-                            🔔
-                            <span className="notification-dot"></span>
-                        </button>
 
-                        <div className="user-profile">
-                            <div className="user-avatar">
-                                D
-                            </div>
+                        {/* Notification */}
+                        <div
+                            className="notification-wrapper"
+                            ref={notificationRef}
+                        >
 
-                            <div className="user-info">
-                                <strong>Donor</strong>
-                                <span>Food Contributor</span>
-                            </div>
+                            <button
+                                className="notification-button"
+                                onClick={() => {
+                                    setNotificationOpen((prev) => {
+                                        const nextState = !prev;
+
+                                        /*
+                                            When opening notifications,
+                                            mark them as seen.
+                                        */
+                                        if (nextState) {
+                                            setNotificationsSeen(true);
+                                        }
+
+                                        return nextState;
+                                    });
+
+                                    setProfileOpen(false);
+                                }}
+                                aria-label="Notifications"
+                            >
+                                🔔
+
+                                {notifications.length > 0 &&
+                                    !notificationsSeen && (
+                                        <span className="notification-dot" />
+                                    )}
+                            </button>
+
+                            {notificationOpen && (
+                                <div className="notification-dropdown">
+
+                                    <div className="dropdown-header">
+
+                                        <div>
+                                            <h3>Notifications</h3>
+
+                                            <span>
+                                                Recent activity
+                                            </span>
+                                        </div>
+
+                                        <button
+                                            onClick={() =>
+                                                setNotificationOpen(
+                                                    false
+                                                )
+                                            }
+                                        >
+                                            ✕
+                                        </button>
+
+                                    </div>
+
+                                    <div className="notification-list">
+
+                                        {notifications.length === 0 ? (
+                                            <div className="no-notifications">
+
+                                                <div>🔔</div>
+
+                                                <p>
+                                                    No new notifications
+                                                </p>
+
+                                                <span>
+                                                    You're all caught up!
+                                                </span>
+
+                                            </div>
+                                        ) : (
+                                            notifications.map(
+                                                (notification) => (
+                                                    <button
+                                                        className="notification-item"
+                                                        key={
+                                                            notification.id
+                                                        }
+                                                        onClick={() =>
+                                                            scrollToSection(
+                                                                "my-donations"
+                                                            )
+                                                        }
+                                                    >
+
+                                                        <div className="notification-icon">
+                                                            {
+                                                                notification.icon
+                                                            }
+                                                        </div>
+
+                                                        <div>
+
+                                                            <strong>
+                                                                {
+                                                                    notification.title
+                                                                }
+                                                            </strong>
+
+                                                            <p>
+                                                                {
+                                                                    notification.message
+                                                                }
+                                                            </p>
+
+                                                        </div>
+
+                                                    </button>
+                                                )
+                                            )
+                                        )}
+
+                                    </div>
+
+                                </div>
+                            )}
+
                         </div>
+
+                        {/* Profile */}
+                        <div
+                            className="profile-wrapper"
+                            ref={profileRef}
+                        >
+
+                            <button
+                                className="user-profile profile-button"
+                                onClick={() => {
+                                    setProfileOpen(
+                                        (prev) => !prev
+                                    );
+
+                                    setNotificationOpen(false);
+                                }}
+                            >
+
+                                <div className="user-avatar">
+                                    D
+                                </div>
+
+                                <div className="user-info">
+
+                                    <strong>Donor</strong>
+
+                                    <span>
+                                        Food Contributor
+                                    </span>
+
+                                </div>
+
+                                <span className="profile-arrow">
+                                    {profileOpen ? "⌃" : "⌄"}
+                                </span>
+
+                            </button>
+
+                            {profileOpen && (
+                                <div className="profile-dropdown">
+
+                                    <div className="profile-dropdown-info">
+
+                                        <div className="profile-dropdown-avatar">
+                                            D
+                                        </div>
+
+                                        <div>
+
+                                            <strong>Donor</strong>
+
+                                            <span>
+                                                Food Contributor
+                                            </span>
+
+                                        </div>
+
+                                    </div>
+
+                                    <div className="dropdown-divider" />
+
+                                    <button
+                                        className="profile-menu-item"
+                                        onClick={() =>
+                                            scrollToSection(
+                                                "dashboard-top"
+                                            )
+                                        }
+                                    >
+                                        <span>▣</span>
+                                        Dashboard
+                                    </button>
+
+                                    <button
+                                        className="profile-menu-item"
+                                        onClick={() =>
+                                            scrollToSection(
+                                                "my-donations"
+                                            )
+                                        }
+                                    >
+                                        <span>🍱</span>
+                                        My Donations
+                                    </button>
+
+                                    <button
+                                        className="profile-menu-item"
+                                        onClick={
+                                            openCreateDonation
+                                        }
+                                    >
+                                        <span>＋</span>
+                                        Create Donation
+                                    </button>
+
+                                    <div className="dropdown-divider" />
+
+                                    <button
+                                        className="profile-menu-item logout-menu-item"
+                                        onClick={onLogout}
+                                    >
+                                        <span>↪</span>
+                                        Logout
+                                    </button>
+
+                                </div>
+                            )}
+
+                        </div>
+
                     </div>
+
                 </header>
 
                 <main className="dashboard-content">
 
-                    {/* Welcome */}
                     <section
                         id="dashboard-top"
                         className="welcome-section"
                     >
+
                         <div className="welcome-content">
+
                             <span className="welcome-badge">
                                 🌱 Making a difference
                             </span>
@@ -512,6 +833,7 @@ function DonorDashboard({ onLogout }) {
                                 <span>＋</span>
                                 Donate Food
                             </button>
+
                         </div>
 
                         <div className="welcome-illustration">
@@ -519,11 +841,13 @@ function DonorDashboard({ onLogout }) {
                                 🍱
                             </div>
                         </div>
+
                     </section>
 
-                    {/* Statistics */}
                     <section className="stats-grid">
+
                         <div className="stat-card">
+
                             <div className="stat-icon total-icon">
                                 🍱
                             </div>
@@ -534,9 +858,11 @@ function DonorDashboard({ onLogout }) {
                             </div>
 
                             <span className="stat-arrow">↗</span>
+
                         </div>
 
                         <div className="stat-card">
+
                             <div className="stat-icon available-icon">
                                 ✓
                             </div>
@@ -547,9 +873,11 @@ function DonorDashboard({ onLogout }) {
                             </div>
 
                             <span className="stat-arrow">↗</span>
+
                         </div>
 
                         <div className="stat-card">
+
                             <div className="stat-icon claimed-icon">
                                 🤝
                             </div>
@@ -560,9 +888,11 @@ function DonorDashboard({ onLogout }) {
                             </div>
 
                             <span className="stat-arrow">↗</span>
+
                         </div>
 
                         <div className="stat-card">
+
                             <div className="stat-icon distributed-icon">
                                 ❤️
                             </div>
@@ -573,17 +903,21 @@ function DonorDashboard({ onLogout }) {
                             </div>
 
                             <span className="stat-arrow">↗</span>
+
                         </div>
+
                     </section>
 
-                    {/* Create Donation */}
                     {showCreateDonation && (
                         <section
                             id="create-donation"
                             className="dashboard-panel create-panel"
                         >
+
                             <div className="panel-header">
+
                                 <div>
+
                                     <span className="panel-label">
                                         DONATION
                                     </span>
@@ -594,6 +928,7 @@ function DonorDashboard({ onLogout }) {
                                         Share surplus food with people
                                         who need it.
                                     </p>
+
                                 </div>
 
                                 <button
@@ -604,6 +939,7 @@ function DonorDashboard({ onLogout }) {
                                 >
                                     ✕
                                 </button>
+
                             </div>
 
                             <CreateDonation
@@ -611,14 +947,17 @@ function DonorDashboard({ onLogout }) {
                                     handleDonationCreated
                                 }
                             />
+
                         </section>
                     )}
 
-                    {/* Edit Donation */}
                     {editingDonation && (
                         <section className="dashboard-panel edit-panel">
+
                             <div className="panel-header">
+
                                 <div>
+
                                     <span className="panel-label">
                                         UPDATE
                                     </span>
@@ -629,6 +968,7 @@ function DonorDashboard({ onLogout }) {
                                         Update the details of your
                                         available donation.
                                     </p>
+
                                 </div>
 
                                 <button
@@ -637,16 +977,21 @@ function DonorDashboard({ onLogout }) {
                                 >
                                     ✕
                                 </button>
+
                             </div>
 
                             <form
                                 onSubmit={updateDonation}
                                 className="edit-form"
                             >
+
                                 <div className="form-grid">
 
                                     <div className="form-field">
-                                        <label>Food Type</label>
+
+                                        <label>
+                                            Food Type
+                                        </label>
 
                                         <input
                                             type="text"
@@ -659,10 +1004,14 @@ function DonorDashboard({ onLogout }) {
                                             }
                                             required
                                         />
+
                                     </div>
 
                                     <div className="form-field">
-                                        <label>Quantity</label>
+
+                                        <label>
+                                            Quantity
+                                        </label>
 
                                         <input
                                             type="number"
@@ -676,10 +1025,14 @@ function DonorDashboard({ onLogout }) {
                                             min="1"
                                             required
                                         />
+
                                     </div>
 
                                     <div className="form-field">
-                                        <label>Unit</label>
+
+                                        <label>
+                                            Unit
+                                        </label>
 
                                         <select
                                             name="unit"
@@ -688,6 +1041,7 @@ function DonorDashboard({ onLogout }) {
                                                 handleEditChange
                                             }
                                         >
+
                                             <option value="kg">
                                                 kg
                                             </option>
@@ -703,11 +1057,16 @@ function DonorDashboard({ onLogout }) {
                                             <option value="pieces">
                                                 pieces
                                             </option>
+
                                         </select>
+
                                     </div>
 
                                     <div className="form-field">
-                                        <label>Best Before</label>
+
+                                        <label>
+                                            Best Before
+                                        </label>
 
                                         <input
                                             type="date"
@@ -720,9 +1079,11 @@ function DonorDashboard({ onLogout }) {
                                             }
                                             required
                                         />
+
                                     </div>
 
                                     <div className="form-field full-width">
+
                                         <label>
                                             Pickup Address
                                         </label>
@@ -738,9 +1099,11 @@ function DonorDashboard({ onLogout }) {
                                             rows="3"
                                             required
                                         />
+
                                     </div>
 
                                     <div className="form-field full-width">
+
                                         <label>
                                             Replace Food Proof Image
                                             <span>
@@ -765,7 +1128,9 @@ function DonorDashboard({ onLogout }) {
                                                 }
                                             </p>
                                         )}
+
                                     </div>
+
                                 </div>
 
                                 <button
@@ -777,17 +1142,21 @@ function DonorDashboard({ onLogout }) {
                                         ? "Updating..."
                                         : "💾 Update Donation"}
                                 </button>
+
                             </form>
+
                         </section>
                     )}
 
-                    {/* My Donations */}
                     <section
                         id="my-donations"
                         className="donations-section"
                     >
+
                         <div className="section-heading">
+
                             <div>
+
                                 <span className="section-label">
                                     YOUR ACTIVITY
                                 </span>
@@ -798,6 +1167,7 @@ function DonorDashboard({ onLogout }) {
                                     Track and manage the food you've
                                     shared.
                                 </p>
+
                             </div>
 
                             <button
@@ -806,17 +1176,22 @@ function DonorDashboard({ onLogout }) {
                             >
                                 ＋ New Donation
                             </button>
+
                         </div>
 
                         {loading ? (
                             <div className="empty-state">
+
                                 <div className="loading-spinner"></div>
+
                                 <p>
                                     Loading your donations...
                                 </p>
+
                             </div>
                         ) : donations.length === 0 ? (
                             <div className="empty-state">
+
                                 <div className="empty-icon">
                                     🍱
                                 </div>
@@ -834,22 +1209,27 @@ function DonorDashboard({ onLogout }) {
                                 >
                                     ＋ Create Donation
                                 </button>
+
                             </div>
                         ) : (
                             <div className="donations-grid">
+
                                 {donations.map((donation) => (
                                     <div
                                         className="donation-card"
                                         key={donation._id}
                                     >
-                                        {/* Card Header */}
+
                                         <div className="donation-card-header">
+
                                             <div className="food-title">
+
                                                 <div className="food-icon">
                                                     🍲
                                                 </div>
 
                                                 <div>
+
                                                     <h3>
                                                         {
                                                             donation.foodType
@@ -859,7 +1239,9 @@ function DonorDashboard({ onLogout }) {
                                                     <span>
                                                         Donation
                                                     </span>
+
                                                 </div>
+
                                             </div>
 
                                             <span
@@ -870,12 +1252,13 @@ function DonorDashboard({ onLogout }) {
                                             >
                                                 {donation.status}
                                             </span>
+
                                         </div>
 
-                                        {/* Actions */}
                                         {donation.status ===
                                             "available" && (
                                             <div className="card-actions">
+
                                                 <button
                                                     className="edit-button"
                                                     onClick={() =>
@@ -897,15 +1280,18 @@ function DonorDashboard({ onLogout }) {
                                                 >
                                                     🗑️ Delete
                                                 </button>
+
                                             </div>
                                         )}
 
-                                        {/* Details */}
                                         <div className="donation-details">
+
                                             <div className="detail-item">
+
                                                 <span>📦</span>
 
                                                 <div>
+
                                                     <small>
                                                         Quantity
                                                     </small>
@@ -918,13 +1304,17 @@ function DonorDashboard({ onLogout }) {
                                                             donation.unit
                                                         }
                                                     </strong>
+
                                                 </div>
+
                                             </div>
 
                                             <div className="detail-item">
+
                                                 <span>📍</span>
 
                                                 <div>
+
                                                     <small>
                                                         Pickup Location
                                                     </small>
@@ -934,13 +1324,16 @@ function DonorDashboard({ onLogout }) {
                                                             donation.pickupAddress
                                                         }
                                                     </strong>
+
                                                 </div>
+
                                             </div>
+
                                         </div>
 
-                                        {/* Donor Proof */}
                                         {donation.donorProofImage && (
                                             <div className="proof-section">
+
                                                 <h4>
                                                     📷 Food Proof
                                                 </h4>
@@ -951,12 +1344,13 @@ function DonorDashboard({ onLogout }) {
                                                     }
                                                     alt="Donated food proof"
                                                 />
+
                                             </div>
                                         )}
 
-                                        {/* Volunteer */}
                                         {donation.claimedBy && (
                                             <div className="volunteer-section">
+
                                                 <h4>
                                                     🤝 Volunteer Details
                                                 </h4>
@@ -982,13 +1376,14 @@ function DonorDashboard({ onLogout }) {
                                                             .email
                                                     }
                                                 </p>
+
                                             </div>
                                         )}
 
-                                        {/* OTP */}
                                         {donation.status ===
                                             "claimed" && (
                                             <div className="otp-section">
+
                                                 <h4>
                                                     🔐 Pickup OTP
                                                 </h4>
@@ -1026,14 +1421,15 @@ function DonorDashboard({ onLogout }) {
                                                         🔐 Generate OTP
                                                     </button>
                                                 )}
+
                                             </div>
                                         )}
 
-                                        {/* Distribution Proof */}
                                         {donation.status ===
                                             "distributed" &&
                                             donation.volunteerProofImage && (
                                                 <div className="distribution-section">
+
                                                     <h4>
                                                         ✅ Food Distributed
                                                         Successfully
@@ -1058,10 +1454,10 @@ function DonorDashboard({ onLogout }) {
                                                         }
                                                         alt="Volunteer distribution proof"
                                                     />
+
                                                 </div>
                                             )}
 
-                                        {/* Status Message */}
                                         <div
                                             className="status-message"
                                             style={{
@@ -1080,20 +1476,26 @@ function DonorDashboard({ onLogout }) {
                                                 donation.status
                                             )}
                                         </div>
+
                                     </div>
                                 ))}
+
                             </div>
                         )}
+
                     </section>
 
-                    {/* Impact */}
                     <section
                         id="impact-section"
                         className="impact-section"
                     >
-                        <div className="impact-icon">🌱</div>
+
+                        <div className="impact-icon">
+                            🌱
+                        </div>
 
                         <div>
+
                             <span>YOUR IMPACT</span>
 
                             <h2>
@@ -1105,19 +1507,28 @@ function DonorDashboard({ onLogout }) {
                                 reduce waste and making sure good food
                                 reaches people who need it.
                             </p>
+
                         </div>
+
                     </section>
+
                 </main>
 
                 <footer className="dashboard-footer">
+
                     <p>
                         Together, we can reduce food waste
                         <span> 🌱❤️</span>
                     </p>
 
-                    <span>FoodShare • Donor Portal</span>
+                    <span>
+                        FoodShare • Donor Portal
+                    </span>
+
                 </footer>
+
             </div>
+
         </div>
     );
 }

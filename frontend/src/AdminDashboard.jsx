@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import "./AdminDashboard.css";
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -14,6 +14,14 @@ function AdminDashboard({ onLogout }) {
     const [donationsLoading, setDonationsLoading] = useState(true);
 
     const [sidebarOpen, setSidebarOpen] = useState(false);
+
+    // Topbar dropdowns
+    const [notificationOpen, setNotificationOpen] = useState(false);
+    const [profileOpen, setProfileOpen] = useState(false);
+    const [profileModalOpen, setProfileModalOpen] = useState(false);
+
+    const notificationRef = useRef(null);
+    const profileRef = useRef(null);
 
     // User management
     const [userSearch, setUserSearch] = useState("");
@@ -121,6 +129,37 @@ function AdminDashboard({ onLogout }) {
         fetchStats();
         fetchUsers();
         fetchDonations();
+    }, []);
+
+    // Close topbar dropdowns when clicking outside
+    useEffect(() => {
+        const handleOutsideClick = (event) => {
+            if (
+                notificationRef.current &&
+                !notificationRef.current.contains(event.target)
+            ) {
+                setNotificationOpen(false);
+            }
+
+            if (
+                profileRef.current &&
+                !profileRef.current.contains(event.target)
+            ) {
+                setProfileOpen(false);
+            }
+        };
+
+        document.addEventListener(
+            "mousedown",
+            handleOutsideClick
+        );
+
+        return () => {
+            document.removeEventListener(
+                "mousedown",
+                handleOutsideClick
+            );
+        };
     }, []);
 
     const scrollToSection = (id) => {
@@ -357,6 +396,7 @@ function AdminDashboard({ onLogout }) {
     };
 
     let currentUserId = null;
+    let adminEmail = "Administrator";
 
     try {
         const token = localStorage.getItem("token");
@@ -371,10 +411,63 @@ function AdminDashboard({ onLogout }) {
                 payload._id ||
                 payload.userId ||
                 null;
+
+            adminEmail =
+                payload.email ||
+                payload.userEmail ||
+                "Administrator";
         }
     } catch {
         currentUserId = null;
     }
+
+    // Admin notifications
+    const notifications = [
+        {
+            icon: "👥",
+            title: "User activity",
+            text: `${users.length} users are registered on FoodShare.`,
+            type: "users"
+        },
+        {
+            icon: "🍱",
+            title: "Donation activity",
+            text: `${donations.length} total donations are currently recorded.`,
+            type: "donations"
+        },
+        {
+            icon: "🟢",
+            title: "Available donations",
+            text: `${donationStatusCounts.available} donations are currently available.`,
+            type: "available"
+        },
+        {
+            icon: "🤝",
+            title: "Volunteer activity",
+            text: `${stats?.totalVolunteers ?? 0} volunteers are registered.`,
+            type: "volunteers"
+        }
+    ];
+
+    const handleNotificationClick = () => {
+        setNotificationOpen((current) => !current);
+        setProfileOpen(false);
+    };
+
+    const handleProfileClick = () => {
+        setProfileOpen((current) => !current);
+        setNotificationOpen(false);
+    };
+
+    const handleViewProfile = () => {
+        setProfileOpen(false);
+        setProfileModalOpen(true);
+    };
+
+    const handleProfileDashboard = () => {
+        setProfileOpen(false);
+        scrollToSection("admin-dashboard");
+    };
 
     return (
         <div className="admin-dashboard">
@@ -506,26 +599,201 @@ function AdminDashboard({ onLogout }) {
                     </div>
 
                     <div className="topbar-actions">
-                        <button className="notification-button">
-                            🔔
-                            <span className="notification-dot"></span>
-                        </button>
 
-                        <div className="admin-profile">
-                            <div className="admin-avatar">
-                                A
-                            </div>
+                        {/* Notifications */}
+                        <div
+                            className="notification-wrapper"
+                            ref={notificationRef}
+                        >
+                            <button
+                                className={`notification-button ${
+                                    notificationOpen
+                                        ? "notification-active"
+                                        : ""
+                                }`}
+                                onClick={
+                                    handleNotificationClick
+                                }
+                                aria-label="Notifications"
+                            >
+                                🔔
 
-                            <div className="admin-profile-text">
-                                <strong>
-                                    Administrator
-                                </strong>
+                                <span className="notification-dot"></span>
+                            </button>
 
-                                <span>
-                                    Platform Manager
-                                </span>
-                            </div>
+                            {notificationOpen && (
+                                <div className="notification-dropdown">
+                                    <div className="notification-header">
+                                        <div>
+                                            <strong>
+                                                Notifications
+                                            </strong>
+
+                                            <span>
+                                                Platform updates
+                                            </span>
+                                        </div>
+
+                                        <span className="notification-count">
+                                            {notifications.length}
+                                        </span>
+                                    </div>
+
+                                    <div className="notification-list">
+                                        {notifications.map(
+                                            (
+                                                notification,
+                                                index
+                                            ) => (
+                                                <button
+                                                    className="notification-item"
+                                                    key={`${notification.type}-${index}`}
+                                                    onClick={() => {
+                                                        setNotificationOpen(
+                                                            false
+                                                        );
+
+                                                        if (
+                                                            notification.type ===
+                                                            "users"
+                                                        ) {
+                                                            scrollToSection(
+                                                                "users-section"
+                                                            );
+                                                        }
+
+                                                        if (
+                                                            notification.type ===
+                                                            "donations" ||
+                                                            notification.type ===
+                                                            "available"
+                                                        ) {
+                                                            scrollToSection(
+                                                                "donations-section"
+                                                            );
+                                                        }
+                                                    }}
+                                                >
+                                                    <div className="notification-item-icon">
+                                                        {
+                                                            notification.icon
+                                                        }
+                                                    </div>
+
+                                                    <div className="notification-item-content">
+                                                        <strong>
+                                                            {
+                                                                notification.title
+                                                            }
+                                                        </strong>
+
+                                                        <span>
+                                                            {
+                                                                notification.text
+                                                            }
+                                                        </span>
+                                                    </div>
+                                                </button>
+                                            )
+                                        )}
+                                    </div>
+                                </div>
+                            )}
                         </div>
+
+                        {/* Admin Profile */}
+                        <div
+                            className="admin-profile-wrapper"
+                            ref={profileRef}
+                        >
+                            <button
+                                className={`admin-profile ${
+                                    profileOpen
+                                        ? "profile-active"
+                                        : ""
+                                }`}
+                                onClick={
+                                    handleProfileClick
+                                }
+                                aria-label="Admin profile"
+                            >
+                                <div className="admin-avatar">
+                                    A
+                                </div>
+
+                                <div className="admin-profile-text">
+                                    <strong>
+                                        Administrator
+                                    </strong>
+
+                                    <span>
+                                        Platform Manager
+                                    </span>
+                                </div>
+
+                                <span className="profile-arrow">
+                                    ▾
+                                </span>
+                            </button>
+
+                            {profileOpen && (
+                                <div className="profile-dropdown">
+
+                                    <div className="profile-dropdown-header">
+                                        <div className="profile-dropdown-avatar">
+                                            A
+                                        </div>
+
+                                        <div>
+                                            <strong>
+                                                Administrator
+                                            </strong>
+
+                                            <span>
+                                                Platform Manager
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <div className="profile-dropdown-divider"></div>
+
+                                    <button
+                                        className="profile-dropdown-item"
+                                        onClick={
+                                            handleProfileDashboard
+                                        }
+                                    >
+                                        <span>⌂</span>
+                                        Dashboard
+                                    </button>
+
+                                    <button
+                                        className="profile-dropdown-item"
+                                        onClick={
+                                            handleViewProfile
+                                        }
+                                    >
+                                        <span>👤</span>
+                                        View Profile
+                                    </button>
+
+                                    <button
+                                        className="profile-dropdown-item logout-dropdown-item"
+                                        onClick={() => {
+                                            setProfileOpen(
+                                                false
+                                            );
+                                            onLogout();
+                                        }}
+                                    >
+                                        <span>↪</span>
+                                        Logout
+                                    </button>
+
+                                </div>
+                            )}
+                        </div>
+
                     </div>
                 </header>
 
@@ -1490,6 +1758,101 @@ function AdminDashboard({ onLogout }) {
                     </section>
 
                 </main>
+
+                {/* Admin Profile Modal */}
+                {profileModalOpen && (
+                    <div
+                        className="user-modal-overlay"
+                        onClick={() =>
+                            setProfileModalOpen(false)
+                        }
+                    >
+                        <div
+                            className="admin-profile-modal"
+                            onClick={(e) =>
+                                e.stopPropagation()
+                            }
+                        >
+                            <button
+                                className="modal-close-button"
+                                onClick={() =>
+                                    setProfileModalOpen(
+                                        false
+                                    )
+                                }
+                            >
+                                ×
+                            </button>
+
+                            <div className="profile-modal-avatar">
+                                A
+                            </div>
+
+                            <h2>
+                                Administrator
+                            </h2>
+
+                            <span className="role-badge admin">
+                                admin
+                            </span>
+
+                            <div className="user-detail-list">
+
+                                <div className="user-detail-item">
+                                    <span>
+                                        Name
+                                    </span>
+
+                                    <strong>
+                                        Administrator
+                                    </strong>
+                                </div>
+
+                                <div className="user-detail-item">
+                                    <span>
+                                        Email
+                                    </span>
+
+                                    <strong>
+                                        {adminEmail}
+                                    </strong>
+                                </div>
+
+                                <div className="user-detail-item">
+                                    <span>
+                                        Role
+                                    </span>
+
+                                    <strong>
+                                        Platform Administrator
+                                    </strong>
+                                </div>
+
+                                <div className="user-detail-item">
+                                    <span>
+                                        Account
+                                    </span>
+
+                                    <strong>
+                                        Active
+                                    </strong>
+                                </div>
+
+                            </div>
+
+                            <button
+                                className="modal-done-button"
+                                onClick={() =>
+                                    setProfileModalOpen(
+                                        false
+                                    )
+                                }
+                            >
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                )}
 
                 {/* User Details Modal */}
                 {selectedUser && (

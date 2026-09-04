@@ -35,8 +35,6 @@ function Register({ onLogin, onBackHome }) {
                 return;
             }
 
-            
-
             // Go back to Login page
             onLogin();
 
@@ -307,10 +305,38 @@ function Register({ onLogin, onBackHome }) {
                     </button>
                 </form>
 
+                {/* Login Option */}
+                <div
+                    style={{
+                        textAlign: "center",
+                        marginTop: "20px",
+                        fontSize: "14px",
+                        color: "#777"
+                    }}
+                >
+                    <span>Already have an account? </span>
+
+                    <button
+                        type="button"
+                        onClick={onLogin}
+                        style={{
+                            border: "none",
+                            background: "none",
+                            padding: 0,
+                            color: "#198754",
+                            fontSize: "14px",
+                            fontWeight: "bold",
+                            cursor: "pointer"
+                        }}
+                    >
+                        Login
+                    </button>
+                </div>
+
                 <p
                     style={{
                         textAlign: "center",
-                        marginTop: "22px",
+                        marginTop: "18px",
                         color: "#888",
                         fontSize: "14px"
                     }}

@@ -7,11 +7,38 @@ import VolunteerDashboard from "./VolunteerDashboard";
 import AdminDashboard from "./AdminDashboard";
 
 function App() {
-    const [page, setPage] = useState("home");
+    // Restore the correct page after refresh
+    const [page, setPage] = useState(() => {
+        const token = localStorage.getItem("token");
+        const role = localStorage.getItem("role");
+        const savedPage = sessionStorage.getItem("foodshare_page");
+
+        // If user is already logged in, restore their dashboard
+        if (token && role) {
+            return role;
+        }
+
+        // Otherwise restore the last public page
+        if (savedPage) {
+            return savedPage;
+        }
+
+        // Default page
+        return "home";
+    });
+
+    // Change page and remember it for refresh
+    const navigateTo = (nextPage) => {
+        setPage(nextPage);
+        sessionStorage.setItem("foodshare_page", nextPage);
+    };
 
     const handleLogout = () => {
         localStorage.removeItem("token");
-        setPage("login");
+        localStorage.removeItem("role");
+
+        sessionStorage.setItem("foodshare_page", "home");
+        setPage("home");
     };
 
     if (page === "donor") {
@@ -62,8 +89,8 @@ function App() {
                 }}
             >
                 <Home
-                    onLogin={() => setPage("login")}
-                    onRegister={() => setPage("register")}
+                    onLogin={() => navigateTo("login")}
+                    onRegister={() => navigateTo("register")}
                 />
             </div>
         );
@@ -78,9 +105,9 @@ function App() {
                 }}
             >
                 <Login
-                    onLogin={(role) => setPage(role)}
-                    onRegister={() => setPage("register")}
-                    onBackHome={() => setPage("home")}
+                    onLogin={(role) => navigateTo(role)}
+                    onRegister={() => navigateTo("register")}
+                    onBackHome={() => navigateTo("home")}
                 />
             </div>
         );
@@ -94,10 +121,9 @@ function App() {
             }}
         >
             <Register
-                onLogin={() => setPage("login")}
-                onBackHome={() => setPage("home")}
+                onLogin={() => navigateTo("login")}
+                onBackHome={() => navigateTo("home")}
             />
-            
         </div>
     );
 }

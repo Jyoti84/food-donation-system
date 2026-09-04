@@ -5,9 +5,14 @@ const API_URL = "https://food-donation-system-jzpj.onrender.com";
 function Login({ onLogin, onRegister, onBackHome }) {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
+    const [loading, setLoading] = useState(false);
 
     const handleLogin = async (e) => {
         e.preventDefault();
+
+        if (loading) return;
+
+        setLoading(true);
 
         try {
             const response = await fetch(
@@ -15,31 +20,45 @@ function Login({ onLogin, onRegister, onBackHome }) {
                 {
                     method: "POST",
                     headers: {
-                        "Content-Type": "application/json"
+                        "Content-Type": "application/json",
                     },
                     body: JSON.stringify({
                         email,
-                        password
-                    })
+                        password,
+                    }),
                 }
             );
 
             const data = await response.json();
 
             if (!response.ok) {
-                alert(data.message);
+                alert(data.message || "Login failed");
+                setLoading(false);
                 return;
             }
 
             console.log("Login successful:", data);
 
+            // Save authentication data
             localStorage.setItem("token", data.token);
-            onLogin(data.user.role);
+            localStorage.setItem("role", data.user.role);
 
-            
+            // Save complete user information
+            // This is required by the dashboards for profile information.
+            localStorage.setItem(
+                "user",
+                JSON.stringify(data.user)
+            );
+
+            // Redirect according to role
+            onLogin(data.user.role);
         } catch (error) {
             console.error("Login error:", error);
-            alert("Server error");
+            alert(
+                "Unable to connect to server. Please try again."
+            );
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -54,14 +73,14 @@ function Login({ onLogin, onRegister, onBackHome }) {
                 overflow: "hidden",
                 background:
                     "radial-gradient(circle at 15% 20%, rgba(52, 211, 153, 0.25), transparent 30%), radial-gradient(circle at 85% 80%, rgba(16, 185, 129, 0.2), transparent 30%), linear-gradient(135deg, #064e3b, #022c22)",
-                fontFamily: "Arial, sans-serif"
+                fontFamily: "Arial, sans-serif",
             }}
         >
-            {/* Back Arrow Button */}
             <button
                 type="button"
                 onClick={onBackHome}
                 aria-label="Back to Home"
+                disabled={loading}
                 style={{
                     position: "absolute",
                     top: "28px",
@@ -74,19 +93,22 @@ function Login({ onLogin, onRegister, onBackHome }) {
                     color: "#047857",
                     fontSize: "24px",
                     fontWeight: "500",
-                    cursor: "pointer",
+                    cursor: loading
+                        ? "not-allowed"
+                        : "pointer",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    boxShadow: "0 4px 12px rgba(0, 0, 0, 0.08)",
+                    boxShadow:
+                        "0 4px 12px rgba(0, 0, 0, 0.08)",
                     zIndex: 10,
-                    lineHeight: "1"
+                    lineHeight: "1",
+                    opacity: loading ? 0.6 : 1,
                 }}
             >
                 ←
             </button>
 
-            {/* Background glowing shapes */}
             <div
                 style={{
                     position: "absolute",
@@ -96,7 +118,7 @@ function Login({ onLogin, onRegister, onBackHome }) {
                     background: "rgba(52, 211, 153, 0.12)",
                     filter: "blur(50px)",
                     top: "-80px",
-                    left: "-80px"
+                    left: "-80px",
                 }}
             />
 
@@ -109,28 +131,29 @@ function Login({ onLogin, onRegister, onBackHome }) {
                     background: "rgba(16, 185, 129, 0.10)",
                     filter: "blur(60px)",
                     bottom: "-120px",
-                    right: "-100px"
+                    right: "-100px",
                 }}
             />
 
-            {/* Login Card */}
             <div
                 style={{
                     position: "relative",
                     zIndex: 2,
                     width: "380px",
+                    maxWidth: "calc(100% - 32px)",
                     backgroundColor: "#fffdf7",
                     padding: "40px",
                     borderRadius: "20px",
                     boxShadow:
-                        "0 20px 60px rgba(0, 0, 0, 0.35)"
+                        "0 20px 60px rgba(0, 0, 0, 0.35)",
+                    boxSizing: "border-box",
                 }}
             >
                 <div style={{ textAlign: "center" }}>
                     <div
                         style={{
                             fontSize: "42px",
-                            marginBottom: "8px"
+                            marginBottom: "8px",
                         }}
                     >
                         🍲
@@ -141,7 +164,7 @@ function Login({ onLogin, onRegister, onBackHome }) {
                             margin: 0,
                             color: "#047857",
                             fontSize: "30px",
-                            fontWeight: "700"
+                            fontWeight: "700",
                         }}
                     >
                         FoodShare
@@ -151,7 +174,7 @@ function Login({ onLogin, onRegister, onBackHome }) {
                         style={{
                             color: "#6b7280",
                             marginTop: "8px",
-                            marginBottom: "28px"
+                            marginBottom: "28px",
                         }}
                     >
                         Share food. Spread kindness.
@@ -162,7 +185,7 @@ function Login({ onLogin, onRegister, onBackHome }) {
                     style={{
                         textAlign: "center",
                         color: "#1f2937",
-                        marginBottom: "25px"
+                        marginBottom: "25px",
                     }}
                 >
                     Welcome Back
@@ -174,7 +197,7 @@ function Login({ onLogin, onRegister, onBackHome }) {
                             display: "block",
                             marginBottom: "7px",
                             color: "#374151",
-                            fontWeight: "600"
+                            fontWeight: "600",
                         }}
                     >
                         Email
@@ -184,7 +207,10 @@ function Login({ onLogin, onRegister, onBackHome }) {
                         type="email"
                         placeholder="Enter your email"
                         value={email}
-                        onChange={(e) => setEmail(e.target.value)}
+                        onChange={(e) =>
+                            setEmail(e.target.value)
+                        }
+                        disabled={loading}
                         required
                         style={{
                             width: "100%",
@@ -195,7 +221,7 @@ function Login({ onLogin, onRegister, onBackHome }) {
                             borderRadius: "9px",
                             fontSize: "15px",
                             outline: "none",
-                            backgroundColor: "#ffffff"
+                            backgroundColor: "#ffffff",
                         }}
                     />
 
@@ -204,7 +230,7 @@ function Login({ onLogin, onRegister, onBackHome }) {
                             display: "block",
                             marginBottom: "7px",
                             color: "#374151",
-                            fontWeight: "600"
+                            fontWeight: "600",
                         }}
                     >
                         Password
@@ -214,7 +240,10 @@ function Login({ onLogin, onRegister, onBackHome }) {
                         type="password"
                         placeholder="Enter your password"
                         value={password}
-                        onChange={(e) => setPassword(e.target.value)}
+                        onChange={(e) =>
+                            setPassword(e.target.value)
+                        }
+                        disabled={loading}
                         required
                         style={{
                             width: "100%",
@@ -225,46 +254,59 @@ function Login({ onLogin, onRegister, onBackHome }) {
                             borderRadius: "9px",
                             fontSize: "15px",
                             outline: "none",
-                            backgroundColor: "#ffffff"
+                            backgroundColor: "#ffffff",
                         }}
                     />
 
                     <button
                         type="submit"
+                        disabled={loading}
                         style={{
                             width: "100%",
                             padding: "13px",
                             border: "none",
                             borderRadius: "9px",
-                            backgroundColor: "#047857",
+                            backgroundColor: loading
+                                ? "#059669"
+                                : "#047857",
                             color: "#ffffff",
                             fontSize: "16px",
                             fontWeight: "bold",
-                            cursor: "pointer",
-                            boxShadow: "0 5px 15px rgba(4, 120, 87, 0.25)"
+                            cursor: loading
+                                ? "not-allowed"
+                                : "pointer",
+                            boxShadow:
+                                "0 5px 15px rgba(4, 120, 87, 0.25)",
+                            opacity: loading ? 0.8 : 1,
                         }}
                     >
-                        Login
+                        {loading
+                            ? "Logging in..."
+                            : "Login"}
                     </button>
                 </form>
 
-                {/* Register Option */}
                 <p
                     style={{
                         textAlign: "center",
                         marginTop: "22px",
                         marginBottom: "0",
                         color: "#6b7280",
-                        fontSize: "14px"
+                        fontSize: "14px",
                     }}
                 >
                     Don't have an account?{" "}
                     <span
-                        onClick={onRegister}
+                        onClick={() =>
+                            !loading && onRegister()
+                        }
                         style={{
                             color: "#047857",
                             fontWeight: "600",
-                            cursor: "pointer"
+                            cursor: loading
+                                ? "not-allowed"
+                                : "pointer",
+                            opacity: loading ? 0.6 : 1,
                         }}
                     >
                         Register
@@ -276,7 +318,7 @@ function Login({ onLogin, onRegister, onBackHome }) {
                         textAlign: "center",
                         marginTop: "18px",
                         color: "#9ca3af",
-                        fontSize: "13px"
+                        fontSize: "13px",
                     }}
                 >
                     Together we can reduce food waste ❤️
