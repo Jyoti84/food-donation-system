@@ -8,6 +8,7 @@ const {
     getMyDonations,
     updateDonation,
     deleteDonation,
+    adminDeleteDonation,
     claimDonation,
     generateOTP,
     verifyOTP,
@@ -16,7 +17,10 @@ const {
     getMyClaimedDonations
 } = require("../controllers/donationController");
 
-const { protect } = require("../middleware/authMiddleware");
+const {
+    protect,
+    adminOnly
+} = require("../middleware/authMiddleware");
 
 const upload = require("../middleware/uploadMiddleware");
 
@@ -29,13 +33,25 @@ router.post(
 );
 
 // Get available donations
-router.get("/", protect, getAvailableDonations);
+router.get(
+    "/",
+    protect,
+    getAvailableDonations
+);
 
 // Get donor's own donations
-router.get("/my-donations", protect, getMyDonations);
+router.get(
+    "/my-donations",
+    protect,
+    getMyDonations
+);
 
 // Get volunteer's claimed donations
-router.get("/my-claimed", protect, getMyClaimedDonations);
+router.get(
+    "/my-claimed",
+    protect,
+    getMyClaimedDonations
+);
 
 // Donor edits their own donation
 router.put(
@@ -43,6 +59,15 @@ router.put(
     protect,
     upload.single("donorProofImage"),
     updateDonation
+);
+
+// ADMIN deletes an available donation
+// IMPORTANT: Keep this BEFORE /:id
+router.delete(
+    "/admin/:id",
+    protect,
+    adminOnly,
+    adminDeleteDonation
 );
 
 // Donor deletes their own donation
@@ -53,13 +78,25 @@ router.delete(
 );
 
 // Volunteer claims donation
-router.put("/:id/claim", protect, claimDonation);
+router.put(
+    "/:id/claim",
+    protect,
+    claimDonation
+);
 
 // Donor generates OTP
-router.post("/:id/otp", protect, generateOTP);
+router.post(
+    "/:id/otp",
+    protect,
+    generateOTP
+);
 
 // Volunteer verifies OTP
-router.post("/:id/verify-otp", protect, verifyOTP);
+router.post(
+    "/:id/verify-otp",
+    protect,
+    verifyOTP
+);
 
 // Volunteer uploads distribution proof image
 router.post(
@@ -70,6 +107,10 @@ router.post(
 );
 
 // Mark donation as distributed
-router.put("/:id/distribute", protect, markAsDistributed);
+router.put(
+    "/:id/distribute",
+    protect,
+    markAsDistributed
+);
 
 module.exports = router;

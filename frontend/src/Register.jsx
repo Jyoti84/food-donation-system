@@ -2,7 +2,7 @@ import { useState } from "react";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
-function Register({ onLogin }) {
+function Register({ onLogin, onBackHome }) {
     const [name, setName] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
@@ -35,7 +35,7 @@ function Register({ onLogin }) {
                 return;
             }
 
-            alert("Registration successful! Please login.");
+            
 
             // Go back to Login page
             onLogin();
@@ -53,12 +53,71 @@ function Register({ onLogin }) {
                 display: "flex",
                 justifyContent: "center",
                 alignItems: "center",
+                position: "relative",
+                overflow: "hidden",
                 background:
-                    "linear-gradient(135deg, #e8f5e9, #f1f8e9)",
+                    "radial-gradient(circle at 15% 20%, rgba(52, 211, 153, 0.25), transparent 30%), radial-gradient(circle at 85% 80%, rgba(16, 185, 129, 0.2), transparent 30%), linear-gradient(135deg, #064e3b, #022c22)",
                 fontFamily: "Arial, sans-serif",
                 padding: "30px"
             }}
         >
+            {/* Background glowing shapes */}
+            <div
+                style={{
+                    position: "absolute",
+                    width: "300px",
+                    height: "300px",
+                    borderRadius: "50%",
+                    background: "rgba(52, 211, 153, 0.12)",
+                    filter: "blur(50px)",
+                    top: "-80px",
+                    left: "-80px"
+                }}
+            />
+
+            <div
+                style={{
+                    position: "absolute",
+                    width: "350px",
+                    height: "350px",
+                    borderRadius: "50%",
+                    background: "rgba(16, 185, 129, 0.10)",
+                    filter: "blur(60px)",
+                    bottom: "-120px",
+                    right: "-100px"
+                }}
+            />
+
+            {/* Back Arrow Button */}
+            <button
+                type="button"
+                onClick={onBackHome}
+                aria-label="Back to Home"
+                style={{
+                    position: "absolute",
+                    top: "28px",
+                    left: "32px",
+                    width: "44px",
+                    height: "44px",
+                    border: "1px solid rgba(25, 135, 84, 0.2)",
+                    borderRadius: "10px",
+                    backgroundColor: "#ffffff",
+                    color: "#198754",
+                    fontSize: "24px",
+                    fontWeight: "500",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    boxShadow: "0 4px 12px rgba(0, 0, 0, 0.08)",
+                    zIndex: 10,
+                    lineHeight: "1"
+                }}
+            >
+                ←
+            </button>
+
+            {/* Register Card */}
             <div
                 style={{
                     width: "400px",

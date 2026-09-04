@@ -22,6 +22,11 @@ const userSchema = new mongoose.Schema(
             type: String,
             enum: ["donor", "volunteer", "admin"],
             default: "donor"
+        },
+
+        isActive: {
+            type: Boolean,
+            default: true
         }
     },
     {

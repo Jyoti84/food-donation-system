@@ -2,7 +2,7 @@ import { useState } from "react";
 
 const API_URL = "https://food-donation-system-jzpj.onrender.com";
 
-function Login({ onLogin, onRegister }) {
+function Login({ onLogin, onRegister, onBackHome }) {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
 
@@ -36,7 +36,7 @@ function Login({ onLogin, onRegister }) {
             localStorage.setItem("token", data.token);
             onLogin(data.user.role);
 
-            alert("Login successful");
+            
         } catch (error) {
             console.error("Login error:", error);
             alert("Server error");
@@ -57,6 +57,35 @@ function Login({ onLogin, onRegister }) {
                 fontFamily: "Arial, sans-serif"
             }}
         >
+            {/* Back Arrow Button */}
+            <button
+                type="button"
+                onClick={onBackHome}
+                aria-label="Back to Home"
+                style={{
+                    position: "absolute",
+                    top: "28px",
+                    left: "32px",
+                    width: "44px",
+                    height: "44px",
+                    border: "1px solid rgba(255, 255, 255, 0.2)",
+                    borderRadius: "10px",
+                    backgroundColor: "#ffffff",
+                    color: "#047857",
+                    fontSize: "24px",
+                    fontWeight: "500",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    boxShadow: "0 4px 12px rgba(0, 0, 0, 0.08)",
+                    zIndex: 10,
+                    lineHeight: "1"
+                }}
+            >
+                ←
+            </button>
+
             {/* Background glowing shapes */}
             <div
                 style={{

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import CreateDonation from "./CreateDonation";
+import "./DonorDashboard.css";
 
 const API_URL = `${import.meta.env.VITE_API_URL}/api/donations`;
 
@@ -9,7 +10,6 @@ function DonorDashboard({ onLogout }) {
     const [loading, setLoading] = useState(true);
     const [generatedOtps, setGeneratedOtps] = useState({});
 
-    // Edit states
     const [editingDonation, setEditingDonation] = useState(null);
     const [editForm, setEditForm] = useState({
         foodType: "",
@@ -20,6 +20,7 @@ function DonorDashboard({ onLogout }) {
     });
     const [editProofImage, setEditProofImage] = useState(null);
     const [updating, setUpdating] = useState(false);
+    const [sidebarOpen, setSidebarOpen] = useState(false);
 
     const fetchMyDonations = async () => {
         try {
@@ -57,7 +58,6 @@ function DonorDashboard({ onLogout }) {
         fetchMyDonations();
     };
 
-    // Generate OTP - DONOR
     const generateOTP = async (donationId) => {
         try {
             const token = localStorage.getItem("token");
@@ -83,15 +83,12 @@ function DonorDashboard({ onLogout }) {
                 ...prev,
                 [donationId]: data.otp
             }));
-
-            alert("OTP generated successfully");
         } catch (error) {
             console.error("Generate OTP error:", error);
             alert("Server error");
         }
     };
 
-    // Start editing donation
     const startEditing = (donation) => {
         if (donation.status !== "available") {
             alert("Only available donations can be edited.");
@@ -115,7 +112,6 @@ function DonorDashboard({ onLogout }) {
         setEditProofImage(null);
     };
 
-    // Cancel editing
     const cancelEditing = () => {
         setEditingDonation(null);
 
@@ -130,7 +126,6 @@ function DonorDashboard({ onLogout }) {
         setEditProofImage(null);
     };
 
-    // Handle edit input
     const handleEditChange = (e) => {
         const { name, value } = e.target;
 
@@ -140,7 +135,6 @@ function DonorDashboard({ onLogout }) {
         }));
     };
 
-    // Handle new proof image
     const handleEditImageChange = (e) => {
         const file = e.target.files[0];
 
@@ -164,7 +158,6 @@ function DonorDashboard({ onLogout }) {
         setEditProofImage(file);
     };
 
-    // Update donation
     const updateDonation = async (e) => {
         e.preventDefault();
 
@@ -176,24 +169,16 @@ function DonorDashboard({ onLogout }) {
             setUpdating(true);
 
             const token = localStorage.getItem("token");
-
             const formData = new FormData();
 
             formData.append("foodType", editForm.foodType);
             formData.append("quantity", editForm.quantity);
             formData.append("unit", editForm.unit);
             formData.append("bestBefore", editForm.bestBefore);
-            formData.append(
-                "pickupAddress",
-                editForm.pickupAddress
-            );
+            formData.append("pickupAddress", editForm.pickupAddress);
 
-            // New proof image is optional
             if (editProofImage) {
-                formData.append(
-                    "donorProofImage",
-                    editProofImage
-                );
+                formData.append("donorProofImage", editProofImage);
             }
 
             const response = await fetch(
@@ -214,11 +199,8 @@ function DonorDashboard({ onLogout }) {
                 return;
             }
 
-            alert("Donation updated successfully!");
-
             cancelEditing();
             fetchMyDonations();
-
         } catch (error) {
             console.error("Update donation error:", error);
             alert("Server error");
@@ -227,7 +209,6 @@ function DonorDashboard({ onLogout }) {
         }
     };
 
-    // Delete donation
     const deleteDonation = async (donationId) => {
         const confirmed = window.confirm(
             "Are you sure you want to delete this donation?"
@@ -257,34 +238,47 @@ function DonorDashboard({ onLogout }) {
                 return;
             }
 
-            alert("Donation deleted successfully!");
-
             setDonations((prev) =>
                 prev.filter(
                     (donation) => donation._id !== donationId
                 )
             );
-
         } catch (error) {
             console.error("Delete donation error:", error);
             alert("Server error");
         }
     };
 
-    // Statistics
-    const totalDonations = donations.length;
+    const scrollToSection = (id) => {
+        const element = document.getElementById(id);
 
-    const availableDonations = donations.filter(
-        (donation) => donation.status === "available"
-    ).length;
+        if (element) {
+            element.scrollIntoView({
+                behavior: "smooth",
+                block: "start"
+            });
+        }
 
-    const claimedDonations = donations.filter(
-        (donation) => donation.status === "claimed"
-    ).length;
+        setSidebarOpen(false);
+    };
 
-    const distributedDonations = donations.filter(
-        (donation) => donation.status === "distributed"
-    ).length;
+    const openCreateDonation = () => {
+        setShowCreateDonation(true);
+        setSidebarOpen(false);
+
+        setTimeout(() => {
+            const element = document.getElementById(
+                "create-donation"
+            );
+
+            if (element) {
+                element.scrollIntoView({
+                    behavior: "smooth",
+                    block: "start"
+                });
+            }
+        }, 100);
+    };
 
     const getStatusStyle = (status) => {
         if (status === "available") {
@@ -341,906 +335,789 @@ function DonorDashboard({ onLogout }) {
         return "";
     };
 
-    return (
-        <div
-            style={{
-                minHeight: "100vh",
-                width: "100%",
-                background:
-                    "linear-gradient(135deg, #f1f8f3, #e8f5e9)",
-                fontFamily: "Arial, sans-serif"
-            }}
-        >
-            {/* Header */}
-            <header
-                style={{
-                    width: "100%",
-                    backgroundColor: "#ffffff",
-                    boxShadow: "0 2px 10px rgba(0,0,0,0.08)",
-                    padding: "18px 4%",
-                    boxSizing: "border-box",
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center"
-                }}
-            >
-                <div>
-                    <h2
-                        style={{
-                            margin: 0,
-                            color: "#198754",
-                            fontSize: "26px"
-                        }}
-                    >
-                        🍲 FoodShare
-                    </h2>
+    const totalDonations = donations.length;
 
-                    <p
-                        style={{
-                            margin: "4px 0 0",
-                            color: "#777",
-                            fontSize: "13px"
-                        }}
-                    >
-                        Share food. Spread kindness.
-                    </p>
+    const availableDonations = donations.filter(
+        (donation) => donation.status === "available"
+    ).length;
+
+    const claimedDonations = donations.filter(
+        (donation) => donation.status === "claimed"
+    ).length;
+
+    const distributedDonations = donations.filter(
+        (donation) => donation.status === "distributed"
+    ).length;
+
+    return (
+        <div className="donor-dashboard">
+
+            {/* Mobile Overlay */}
+            {sidebarOpen && (
+                <div
+                    className="sidebar-overlay"
+                    onClick={() => setSidebarOpen(false)}
+                />
+            )}
+
+            {/* Sidebar */}
+            <aside
+                className={`donor-sidebar ${
+                    sidebarOpen ? "sidebar-open" : ""
+                }`}
+            >
+                <div className="sidebar-brand">
+                    <div className="brand-icon">🍲</div>
+
+                    <div>
+                        <h2>FoodShare</h2>
+                        <span>Donor Portal</span>
+                    </div>
                 </div>
 
-                <button
-                    onClick={onLogout}
-                    style={{
-                        padding: "10px 20px",
-                        border: "none",
-                        borderRadius: "8px",
-                        backgroundColor: "#198754",
-                        color: "#ffffff",
-                        fontWeight: "bold",
-                        cursor: "pointer"
-                    }}
-                >
-                    Logout
-                </button>
-            </header>
-
-            <main
-                style={{
-                    width: "100%",
-                    padding: "45px 4%",
-                    boxSizing: "border-box"
-                }}
-            >
-                {/* Welcome Section */}
-                <section
-                    style={{
-                        backgroundColor: "#ffffff",
-                        borderRadius: "18px",
-                        padding: "35px",
-                        marginBottom: "30px",
-                        boxShadow:
-                            "0 6px 20px rgba(52,78,65,0.08)"
-                    }}
-                >
-                    <h1
-                        style={{
-                            margin: "0 0 10px",
-                            color: "#344e41"
-                        }}
-                    >
-                        Welcome, Donor! 👋
-                    </h1>
-
-                    <p style={{ color: "#777" }}>
-                        Your contribution can help put food on someone's table.
-                    </p>
+                <div className="sidebar-section">
+                    <p className="sidebar-heading">MAIN</p>
 
                     <button
-                        onClick={() =>
-                            setShowCreateDonation(!showCreateDonation)
-                        }
-                        style={{
-                            marginTop: "15px",
-                            padding: "13px 24px",
-                            border: "none",
-                            borderRadius: "9px",
-                            backgroundColor: "#198754",
-                            color: "#ffffff",
-                            fontWeight: "bold",
-                            cursor: "pointer"
-                        }}
+                        className="sidebar-link active"
+                        onClick={() => scrollToSection("dashboard-top")}
                     >
-                        {showCreateDonation
-                            ? "✕ Close Form"
-                            : "🍱 Create Donation"}
+                        <span>▣</span>
+                        Dashboard
                     </button>
-                </section>
 
-                {/* Statistics */}
-                <section
-                    style={{
-                        display: "grid",
-                        gridTemplateColumns:
-                            "repeat(4, minmax(0, 1fr))",
-                        gap: "20px",
-                        marginBottom: "35px"
-                    }}
-                >
-                    {[
-                        ["🍱", "Total Donations", totalDonations, "#344e41"],
-                        ["🟢", "Available", availableDonations, "#198754"],
-                        ["🟡", "Claimed", claimedDonations, "#856404"],
-                        ["❤️", "Distributed", distributedDonations, "#7b1fa2"]
-                    ].map(([icon, title, value, color]) => (
-                        <div
-                            key={title}
-                            style={{
-                                backgroundColor: "#ffffff",
-                                borderRadius: "16px",
-                                padding: "25px",
-                                boxShadow:
-                                    "0 5px 18px rgba(0,0,0,0.06)"
-                            }}
+                    <button
+                        className="sidebar-link"
+                        onClick={() =>
+                            scrollToSection("my-donations")
+                        }
+                    >
+                        <span>🍱</span>
+                        My Donations
+                    </button>
+
+                    <button
+                        className="sidebar-link"
+                        onClick={openCreateDonation}
+                    >
+                        <span>＋</span>
+                        Create Donation
+                    </button>
+                </div>
+
+                <div className="sidebar-section">
+                    <p className="sidebar-heading">ACTIVITY</p>
+
+                    <button
+                        className="sidebar-link"
+                        onClick={() =>
+                            scrollToSection("my-donations")
+                        }
+                    >
+                        <span>📜</span>
+                        Donation Activity
+                    </button>
+
+                    <button
+                        className="sidebar-link"
+                        onClick={() =>
+                            scrollToSection("impact-section")
+                        }
+                    >
+                        <span>❤️</span>
+                        My Impact
+                    </button>
+                </div>
+
+                <div className="sidebar-bottom">
+                    <button
+                        className="sidebar-link logout-link"
+                        onClick={onLogout}
+                    >
+                        <span>↪</span>
+                        Logout
+                    </button>
+                </div>
+            </aside>
+
+            {/* Main Area */}
+            <div className="donor-main">
+
+                {/* Top Navbar */}
+                <header className="dashboard-navbar">
+                    <div className="navbar-left">
+                        <button
+                            className="mobile-menu-button"
+                            onClick={() =>
+                                setSidebarOpen(!sidebarOpen)
+                            }
                         >
-                            <div style={{ fontSize: "30px" }}>{icon}</div>
+                            ☰
+                        </button>
 
-                            <p
-                                style={{
-                                    margin: "12px 0 5px",
-                                    color: "#777"
-                                }}
-                            >
-                                {title}
+                        <div>
+                            <p className="breadcrumb">
+                                Donor Portal <span>/</span> Dashboard
                             </p>
 
-                            <h2
-                                style={{
-                                    margin: 0,
-                                    color
-                                }}
-                            >
-                                {value}
-                            </h2>
+                            <h1>Dashboard</h1>
                         </div>
-                    ))}
-                </section>
+                    </div>
 
-                {/* Create Donation */}
-                {showCreateDonation && (
-                    <CreateDonation
-                        onDonationCreated={handleDonationCreated}
-                    />
-                )}
+                    <div className="navbar-right">
+                        <button className="notification-button">
+                            🔔
+                            <span className="notification-dot"></span>
+                        </button>
 
-                {/* Edit Donation Form */}
-                {editingDonation && (
+                        <div className="user-profile">
+                            <div className="user-avatar">
+                                D
+                            </div>
+
+                            <div className="user-info">
+                                <strong>Donor</strong>
+                                <span>Food Contributor</span>
+                            </div>
+                        </div>
+                    </div>
+                </header>
+
+                <main className="dashboard-content">
+
+                    {/* Welcome */}
                     <section
-                        style={{
-                            backgroundColor: "#ffffff",
-                            borderRadius: "18px",
-                            padding: "30px",
-                            marginBottom: "30px",
-                            boxShadow:
-                                "0 6px 20px rgba(52,78,65,0.08)",
-                            border: "1px solid #c8e6c9"
-                        }}
+                        id="dashboard-top"
+                        className="welcome-section"
                     >
-                        <div
-                            style={{
-                                display: "flex",
-                                justifyContent: "space-between",
-                                alignItems: "center",
-                                marginBottom: "20px"
-                            }}
-                        >
-                            <h2
-                                style={{
-                                    margin: 0,
-                                    color: "#344e41"
-                                }}
-                            >
-                                ✏️ Edit Donation
+                        <div className="welcome-content">
+                            <span className="welcome-badge">
+                                🌱 Making a difference
+                            </span>
+
+                            <h2>
+                                Welcome back, Donor! 👋
                             </h2>
+
+                            <p>
+                                Your contribution can help put food
+                                on someone's table and reduce food
+                                waste.
+                            </p>
 
                             <button
-                                onClick={cancelEditing}
-                                style={{
-                                    border: "none",
-                                    backgroundColor: "#eeeeee",
-                                    color: "#555",
-                                    borderRadius: "8px",
-                                    padding: "8px 14px",
-                                    cursor: "pointer"
-                                }}
+                                className="primary-action"
+                                onClick={openCreateDonation}
                             >
-                                ✕ Cancel
+                                <span>＋</span>
+                                Donate Food
                             </button>
                         </div>
 
-                        <form onSubmit={updateDonation}>
-                            <div
-                                style={{
-                                    display: "grid",
-                                    gridTemplateColumns:
-                                        "repeat(auto-fit, minmax(250px, 1fr))",
-                                    gap: "18px"
-                                }}
+                        <div className="welcome-illustration">
+                            <div className="illustration-circle">
+                                🍱
+                            </div>
+                        </div>
+                    </section>
+
+                    {/* Statistics */}
+                    <section className="stats-grid">
+                        <div className="stat-card">
+                            <div className="stat-icon total-icon">
+                                🍱
+                            </div>
+
+                            <div>
+                                <p>Total Donations</p>
+                                <h3>{totalDonations}</h3>
+                            </div>
+
+                            <span className="stat-arrow">↗</span>
+                        </div>
+
+                        <div className="stat-card">
+                            <div className="stat-icon available-icon">
+                                ✓
+                            </div>
+
+                            <div>
+                                <p>Available</p>
+                                <h3>{availableDonations}</h3>
+                            </div>
+
+                            <span className="stat-arrow">↗</span>
+                        </div>
+
+                        <div className="stat-card">
+                            <div className="stat-icon claimed-icon">
+                                🤝
+                            </div>
+
+                            <div>
+                                <p>Claimed</p>
+                                <h3>{claimedDonations}</h3>
+                            </div>
+
+                            <span className="stat-arrow">↗</span>
+                        </div>
+
+                        <div className="stat-card">
+                            <div className="stat-icon distributed-icon">
+                                ❤️
+                            </div>
+
+                            <div>
+                                <p>Distributed</p>
+                                <h3>{distributedDonations}</h3>
+                            </div>
+
+                            <span className="stat-arrow">↗</span>
+                        </div>
+                    </section>
+
+                    {/* Create Donation */}
+                    {showCreateDonation && (
+                        <section
+                            id="create-donation"
+                            className="dashboard-panel create-panel"
+                        >
+                            <div className="panel-header">
+                                <div>
+                                    <span className="panel-label">
+                                        DONATION
+                                    </span>
+
+                                    <h2>Create a Donation</h2>
+
+                                    <p>
+                                        Share surplus food with people
+                                        who need it.
+                                    </p>
+                                </div>
+
+                                <button
+                                    className="close-panel-button"
+                                    onClick={() =>
+                                        setShowCreateDonation(false)
+                                    }
+                                >
+                                    ✕
+                                </button>
+                            </div>
+
+                            <CreateDonation
+                                onDonationCreated={
+                                    handleDonationCreated
+                                }
+                            />
+                        </section>
+                    )}
+
+                    {/* Edit Donation */}
+                    {editingDonation && (
+                        <section className="dashboard-panel edit-panel">
+                            <div className="panel-header">
+                                <div>
+                                    <span className="panel-label">
+                                        UPDATE
+                                    </span>
+
+                                    <h2>Edit Donation</h2>
+
+                                    <p>
+                                        Update the details of your
+                                        available donation.
+                                    </p>
+                                </div>
+
+                                <button
+                                    className="close-panel-button"
+                                    onClick={cancelEditing}
+                                >
+                                    ✕
+                                </button>
+                            </div>
+
+                            <form
+                                onSubmit={updateDonation}
+                                className="edit-form"
                             >
-                                {/* Food Type */}
-                                <div>
-                                    <label
-                                        style={{
-                                            display: "block",
-                                            marginBottom: "7px",
-                                            fontWeight: "bold",
-                                            color: "#344e41"
-                                        }}
-                                    >
-                                        Food Type
-                                    </label>
+                                <div className="form-grid">
 
-                                    <input
-                                        type="text"
-                                        name="foodType"
-                                        value={editForm.foodType}
-                                        onChange={handleEditChange}
-                                        required
-                                        style={{
-                                            width: "100%",
-                                            padding: "12px",
-                                            border:
-                                                "1px solid #ccc",
-                                            borderRadius: "8px",
-                                            boxSizing: "border-box"
-                                        }}
-                                    />
-                                </div>
+                                    <div className="form-field">
+                                        <label>Food Type</label>
 
-                                {/* Quantity */}
-                                <div>
-                                    <label
-                                        style={{
-                                            display: "block",
-                                            marginBottom: "7px",
-                                            fontWeight: "bold",
-                                            color: "#344e41"
-                                        }}
-                                    >
-                                        Quantity
-                                    </label>
+                                        <input
+                                            type="text"
+                                            name="foodType"
+                                            value={
+                                                editForm.foodType
+                                            }
+                                            onChange={
+                                                handleEditChange
+                                            }
+                                            required
+                                        />
+                                    </div>
 
-                                    <input
-                                        type="number"
-                                        name="quantity"
-                                        value={editForm.quantity}
-                                        onChange={handleEditChange}
-                                        min="1"
-                                        required
-                                        style={{
-                                            width: "100%",
-                                            padding: "12px",
-                                            border:
-                                                "1px solid #ccc",
-                                            borderRadius: "8px",
-                                            boxSizing: "border-box"
-                                        }}
-                                    />
-                                </div>
+                                    <div className="form-field">
+                                        <label>Quantity</label>
 
-                                {/* Unit */}
-                                <div>
-                                    <label
-                                        style={{
-                                            display: "block",
-                                            marginBottom: "7px",
-                                            fontWeight: "bold",
-                                            color: "#344e41"
-                                        }}
-                                    >
-                                        Unit
-                                    </label>
+                                        <input
+                                            type="number"
+                                            name="quantity"
+                                            value={
+                                                editForm.quantity
+                                            }
+                                            onChange={
+                                                handleEditChange
+                                            }
+                                            min="1"
+                                            required
+                                        />
+                                    </div>
 
-                                    <select
-                                        name="unit"
-                                        value={editForm.unit}
-                                        onChange={handleEditChange}
-                                        style={{
-                                            width: "100%",
-                                            padding: "12px",
-                                            border:
-                                                "1px solid #ccc",
-                                            borderRadius: "8px",
-                                            boxSizing: "border-box",
-                                            backgroundColor: "#ffffff"
-                                        }}
-                                    >
-                                        <option value="kg">kg</option>
-                                        <option value="grams">grams</option>
-                                        <option value="litres">litres</option>
-                                        <option value="pieces">pieces</option>
-                                    </select>
-                                </div>
+                                    <div className="form-field">
+                                        <label>Unit</label>
 
-                                {/* Best Before */}
-                                <div>
-                                    <label
-                                        style={{
-                                            display: "block",
-                                            marginBottom: "7px",
-                                            fontWeight: "bold",
-                                            color: "#344e41"
-                                        }}
-                                    >
-                                        Best Before
-                                    </label>
-
-                                    <input
-                                        type="date"
-                                        name="bestBefore"
-                                        value={editForm.bestBefore}
-                                        onChange={handleEditChange}
-                                        required
-                                        style={{
-                                            width: "100%",
-                                            padding: "12px",
-                                            border:
-                                                "1px solid #ccc",
-                                            borderRadius: "8px",
-                                            boxSizing: "border-box"
-                                        }}
-                                    />
-                                </div>
-
-                                {/* Pickup Address */}
-                                <div
-                                    style={{
-                                        gridColumn:
-                                            "1 / -1"
-                                    }}
-                                >
-                                    <label
-                                        style={{
-                                            display: "block",
-                                            marginBottom: "7px",
-                                            fontWeight: "bold",
-                                            color: "#344e41"
-                                        }}
-                                    >
-                                        Pickup Address
-                                    </label>
-
-                                    <textarea
-                                        name="pickupAddress"
-                                        value={editForm.pickupAddress}
-                                        onChange={handleEditChange}
-                                        required
-                                        rows="3"
-                                        style={{
-                                            width: "100%",
-                                            padding: "12px",
-                                            border:
-                                                "1px solid #ccc",
-                                            borderRadius: "8px",
-                                            boxSizing: "border-box",
-                                            resize: "vertical"
-                                        }}
-                                    />
-                                </div>
-
-                                {/* New Proof Image */}
-                                <div
-                                    style={{
-                                        gridColumn:
-                                            "1 / -1"
-                                    }}
-                                >
-                                    <label
-                                        style={{
-                                            display: "block",
-                                            marginBottom: "7px",
-                                            fontWeight: "bold",
-                                            color: "#344e41"
-                                        }}
-                                    >
-                                        Replace Food Proof Image
-                                        <span
-                                            style={{
-                                                fontWeight: "normal",
-                                                color: "#777",
-                                                fontSize: "12px"
-                                            }}
+                                        <select
+                                            name="unit"
+                                            value={editForm.unit}
+                                            onChange={
+                                                handleEditChange
+                                            }
                                         >
-                                            {" "}
-                                            (Optional)
-                                        </span>
-                                    </label>
+                                            <option value="kg">
+                                                kg
+                                            </option>
 
-                                    <input
-                                        type="file"
-                                        accept="image/*"
-                                        onChange={
-                                            handleEditImageChange
-                                        }
-                                    />
+                                            <option value="grams">
+                                                grams
+                                            </option>
 
-                                    {editProofImage && (
-                                        <p
-                                            style={{
-                                                marginTop: "8px",
-                                                color: "#198754",
-                                                fontSize: "13px"
-                                            }}
-                                        >
-                                            📷{" "}
-                                            {editProofImage.name}
-                                        </p>
-                                    )}
+                                            <option value="litres">
+                                                litres
+                                            </option>
+
+                                            <option value="pieces">
+                                                pieces
+                                            </option>
+                                        </select>
+                                    </div>
+
+                                    <div className="form-field">
+                                        <label>Best Before</label>
+
+                                        <input
+                                            type="date"
+                                            name="bestBefore"
+                                            value={
+                                                editForm.bestBefore
+                                            }
+                                            onChange={
+                                                handleEditChange
+                                            }
+                                            required
+                                        />
+                                    </div>
+
+                                    <div className="form-field full-width">
+                                        <label>
+                                            Pickup Address
+                                        </label>
+
+                                        <textarea
+                                            name="pickupAddress"
+                                            value={
+                                                editForm.pickupAddress
+                                            }
+                                            onChange={
+                                                handleEditChange
+                                            }
+                                            rows="3"
+                                            required
+                                        />
+                                    </div>
+
+                                    <div className="form-field full-width">
+                                        <label>
+                                            Replace Food Proof Image
+                                            <span>
+                                                {" "}
+                                                (Optional)
+                                            </span>
+                                        </label>
+
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={
+                                                handleEditImageChange
+                                            }
+                                        />
+
+                                        {editProofImage && (
+                                            <p className="selected-file">
+                                                📷{" "}
+                                                {
+                                                    editProofImage.name
+                                                }
+                                            </p>
+                                        )}
+                                    </div>
                                 </div>
+
+                                <button
+                                    type="submit"
+                                    disabled={updating}
+                                    className="save-button"
+                                >
+                                    {updating
+                                        ? "Updating..."
+                                        : "💾 Update Donation"}
+                                </button>
+                            </form>
+                        </section>
+                    )}
+
+                    {/* My Donations */}
+                    <section
+                        id="my-donations"
+                        className="donations-section"
+                    >
+                        <div className="section-heading">
+                            <div>
+                                <span className="section-label">
+                                    YOUR ACTIVITY
+                                </span>
+
+                                <h2>My Donations</h2>
+
+                                <p>
+                                    Track and manage the food you've
+                                    shared.
+                                </p>
                             </div>
 
                             <button
-                                type="submit"
-                                disabled={updating}
-                                style={{
-                                    marginTop: "22px",
-                                    padding: "13px 25px",
-                                    border: "none",
-                                    borderRadius: "9px",
-                                    backgroundColor:
-                                        updating
-                                            ? "#9bb8a5"
-                                            : "#198754",
-                                    color: "#ffffff",
-                                    fontWeight: "bold",
-                                    cursor: updating
-                                        ? "not-allowed"
-                                        : "pointer"
-                                }}
+                                className="outline-action"
+                                onClick={openCreateDonation}
                             >
-                                {updating
-                                    ? "Updating..."
-                                    : "💾 Update Donation"}
+                                ＋ New Donation
                             </button>
-                        </form>
-                    </section>
-                )}
-
-                {/* My Donations */}
-                <section>
-                    <h2
-                        style={{
-                            color: "#344e41"
-                        }}
-                    >
-                        My Donations
-                    </h2>
-
-                    {loading ? (
-                        <p>Loading your donations...</p>
-                    ) : donations.length === 0 ? (
-                        <div
-                            style={{
-                                backgroundColor: "#ffffff",
-                                padding: "50px",
-                                borderRadius: "15px",
-                                textAlign: "center"
-                            }}
-                        >
-                            <h3>No donations yet 🍱</h3>
-                            <p>Create your first donation to help someone.</p>
                         </div>
-                    ) : (
-                        <div
-                            style={{
-                                display: "grid",
-                                gridTemplateColumns:
-                                    "repeat(auto-fit, minmax(300px, 1fr))",
-                                gap: "22px"
-                            }}
-                        >
-                            {donations.map((donation) => (
-                                <div
-                                    key={donation._id}
-                                    style={{
-                                        backgroundColor: "#ffffff",
-                                        borderRadius: "16px",
-                                        padding: "25px",
-                                        boxShadow:
-                                            "0 6px 18px rgba(0,0,0,0.07)"
-                                    }}
+
+                        {loading ? (
+                            <div className="empty-state">
+                                <div className="loading-spinner"></div>
+                                <p>
+                                    Loading your donations...
+                                </p>
+                            </div>
+                        ) : donations.length === 0 ? (
+                            <div className="empty-state">
+                                <div className="empty-icon">
+                                    🍱
+                                </div>
+
+                                <h3>No donations yet</h3>
+
+                                <p>
+                                    Create your first donation and
+                                    help someone in need.
+                                </p>
+
+                                <button
+                                    className="primary-action"
+                                    onClick={openCreateDonation}
                                 >
-                                    {/* Food Header */}
+                                    ＋ Create Donation
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="donations-grid">
+                                {donations.map((donation) => (
                                     <div
-                                        style={{
-                                            display: "flex",
-                                            justifyContent: "space-between",
-                                            alignItems: "center",
-                                            marginBottom: "18px"
-                                        }}
+                                        className="donation-card"
+                                        key={donation._id}
                                     >
-                                        <h3
-                                            style={{
-                                                margin: 0,
-                                                color: "#344e41"
-                                            }}
-                                        >
-                                            🍲 {donation.foodType}
-                                        </h3>
+                                        {/* Card Header */}
+                                        <div className="donation-card-header">
+                                            <div className="food-title">
+                                                <div className="food-icon">
+                                                    🍲
+                                                </div>
 
-                                        <span
-                                            style={{
-                                                ...getStatusStyle(
-                                                    donation.status
-                                                ),
-                                                padding: "6px 10px",
-                                                borderRadius: "20px",
-                                                fontSize: "12px",
-                                                fontWeight: "bold",
-                                                textTransform: "capitalize"
-                                            }}
-                                        >
-                                            {donation.status}
-                                        </span>
-                                    </div>
-
-                                    {/* Edit/Delete Buttons */}
-                                    {donation.status === "available" && (
-                                        <div
-                                            style={{
-                                                display: "flex",
-                                                gap: "10px",
-                                                marginBottom: "15px"
-                                            }}
-                                        >
-                                            <button
-                                                onClick={() =>
-                                                    startEditing(
-                                                        donation
-                                                    )
-                                                }
-                                                style={{
-                                                    flex: 1,
-                                                    padding: "10px",
-                                                    border: "none",
-                                                    borderRadius: "8px",
-                                                    backgroundColor:
-                                                        "#198754",
-                                                    color: "#ffffff",
-                                                    fontWeight: "bold",
-                                                    cursor: "pointer"
-                                                }}
-                                            >
-                                                ✏️ Edit
-                                            </button>
-
-                                            <button
-                                                onClick={() =>
-                                                    deleteDonation(
-                                                        donation._id
-                                                    )
-                                                }
-                                                style={{
-                                                    flex: 1,
-                                                    padding: "10px",
-                                                    border: "none",
-                                                    borderRadius: "8px",
-                                                    backgroundColor:
-                                                        "#dc3545",
-                                                    color: "#ffffff",
-                                                    fontWeight: "bold",
-                                                    cursor: "pointer"
-                                                }}
-                                            >
-                                                🗑️ Delete
-                                            </button>
-                                        </div>
-                                    )}
-
-                                    {/* Donation Details */}
-                                    <div
-                                        style={{
-                                            padding: "15px",
-                                            backgroundColor: "#f8faf8",
-                                            borderRadius: "10px",
-                                            marginBottom: "15px"
-                                        }}
-                                    >
-                                        <p
-                                            style={{
-                                                margin: "0 0 10px",
-                                                color: "#555"
-                                            }}
-                                        >
-                                            📦 <strong>Quantity:</strong>{" "}
-                                            {donation.quantity}{" "}
-                                            {donation.unit}
-                                        </p>
-
-                                        <p
-                                            style={{
-                                                margin: 0,
-                                                color: "#555"
-                                            }}
-                                        >
-                                            📍 <strong>Pickup:</strong>{" "}
-                                            {donation.pickupAddress}
-                                        </p>
-                                    </div>
-
-                                    {/* Donor Proof Image */}
-                                    {donation.donorProofImage && (
-                                        <div
-                                            style={{
-                                                padding: "15px",
-                                                backgroundColor: "#f8faf8",
-                                                borderRadius: "10px",
-                                                marginBottom: "15px"
-                                            }}
-                                        >
-                                            <h4
-                                                style={{
-                                                    margin: "0 0 10px",
-                                                    color: "#344e41"
-                                                }}
-                                            >
-                                                📷 Food Proof
-                                            </h4>
-
-                                            <img
-                                                src={
-                                                    donation.donorProofImage
-                                                }
-                                                alt="Donated food proof"
-                                                style={{
-                                                    width: "100%",
-                                                    maxHeight: "220px",
-                                                    objectFit: "cover",
-                                                    borderRadius: "10px",
-                                                    display: "block"
-                                                }}
-                                            />
-                                        </div>
-                                    )}
-
-                                    {/* Volunteer Details */}
-                                    {donation.claimedBy && (
-                                        <div
-                                            style={{
-                                                padding: "15px",
-                                                backgroundColor: "#e8f5e9",
-                                                borderRadius: "10px",
-                                                marginBottom: "15px",
-                                                border:
-                                                    "1px solid #c8e6c9"
-                                            }}
-                                        >
-                                            <h4
-                                                style={{
-                                                    margin: "0 0 10px",
-                                                    color: "#198754"
-                                                }}
-                                            >
-                                                🤝 Volunteer Details
-                                            </h4>
-
-                                            <p
-                                                style={{
-                                                    margin: "0 0 7px",
-                                                    color: "#555"
-                                                }}
-                                            >
-                                                👤 <strong>Name:</strong>{" "}
-                                                {donation.claimedBy.name}
-                                            </p>
-
-                                            <p
-                                                style={{
-                                                    margin: 0,
-                                                    color: "#555"
-                                                }}
-                                            >
-                                                📧 <strong>Email:</strong>{" "}
-                                                {donation.claimedBy.email}
-                                            </p>
-                                        </div>
-                                    )}
-
-                                    {/* Generate OTP Section */}
-                                    {donation.status === "claimed" && (
-                                        <div
-                                            style={{
-                                                padding: "15px",
-                                                backgroundColor: "#fff8e1",
-                                                borderRadius: "10px",
-                                                marginBottom: "15px",
-                                                border:
-                                                    "1px solid #ffe082",
-                                                textAlign: "center"
-                                            }}
-                                        >
-                                            <h4
-                                                style={{
-                                                    margin: "0 0 12px",
-                                                    color: "#856404"
-                                                }}
-                                            >
-                                                🔐 Pickup OTP
-                                            </h4>
-
-                                            {generatedOtps[
-                                                donation._id
-                                            ] ? (
-                                                <>
-                                                    <div
-                                                        style={{
-                                                            fontSize: "28px",
-                                                            fontWeight:
-                                                                "bold",
-                                                            letterSpacing:
-                                                                "6px",
-                                                            color: "#198754",
-                                                            marginBottom:
-                                                                "10px"
-                                                        }}
-                                                    >
+                                                <div>
+                                                    <h3>
                                                         {
-                                                            generatedOtps[
-                                                                donation
-                                                                    ._id
-                                                            ]
+                                                            donation.foodType
                                                         }
-                                                    </div>
+                                                    </h3>
 
-                                                    <p
-                                                        style={{
-                                                            margin: 0,
-                                                            color: "#777",
-                                                            fontSize:
-                                                                "13px"
-                                                        }}
-                                                    >
-                                                        Share this OTP with
-                                                        the volunteer for
-                                                        pickup verification.
-                                                    </p>
-                                                </>
-                                            ) : (
+                                                    <span>
+                                                        Donation
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            <span
+                                                className="status-badge"
+                                                style={getStatusStyle(
+                                                    donation.status
+                                                )}
+                                            >
+                                                {donation.status}
+                                            </span>
+                                        </div>
+
+                                        {/* Actions */}
+                                        {donation.status ===
+                                            "available" && (
+                                            <div className="card-actions">
                                                 <button
+                                                    className="edit-button"
                                                     onClick={() =>
-                                                        generateOTP(
+                                                        startEditing(
+                                                            donation
+                                                        )
+                                                    }
+                                                >
+                                                    ✏️ Edit
+                                                </button>
+
+                                                <button
+                                                    className="delete-button"
+                                                    onClick={() =>
+                                                        deleteDonation(
                                                             donation._id
                                                         )
                                                     }
-                                                    style={{
-                                                        padding:
-                                                            "11px 20px",
-                                                        border: "none",
-                                                        borderRadius:
-                                                            "8px",
-                                                        backgroundColor:
-                                                            "#f0ad4e",
-                                                        color: "#ffffff",
-                                                        fontWeight:
-                                                            "bold",
-                                                        cursor:
-                                                            "pointer"
-                                                    }}
                                                 >
-                                                    🔐 Generate OTP
+                                                    🗑️ Delete
                                                 </button>
-                                            )}
+                                            </div>
+                                        )}
+
+                                        {/* Details */}
+                                        <div className="donation-details">
+                                            <div className="detail-item">
+                                                <span>📦</span>
+
+                                                <div>
+                                                    <small>
+                                                        Quantity
+                                                    </small>
+
+                                                    <strong>
+                                                        {
+                                                            donation.quantity
+                                                        }{" "}
+                                                        {
+                                                            donation.unit
+                                                        }
+                                                    </strong>
+                                                </div>
+                                            </div>
+
+                                            <div className="detail-item">
+                                                <span>📍</span>
+
+                                                <div>
+                                                    <small>
+                                                        Pickup Location
+                                                    </small>
+
+                                                    <strong>
+                                                        {
+                                                            donation.pickupAddress
+                                                        }
+                                                    </strong>
+                                                </div>
+                                            </div>
                                         </div>
-                                    )}
 
-                                    {/* Volunteer Distribution Proof */}
-                                    {donation.status === "distributed" &&
-                                        donation.volunteerProofImage && (
-                                            <div
-                                                style={{
-                                                    padding: "18px",
-                                                    backgroundColor:
-                                                        "#f3e5f5",
-                                                    borderRadius:
-                                                        "12px",
-                                                    marginBottom:
-                                                        "15px",
-                                                    border:
-                                                        "1px solid #ce93d8"
-                                                }}
-                                            >
-                                                <h4
-                                                    style={{
-                                                        margin:
-                                                            "0 0 10px",
-                                                        color:
-                                                            "#7b1fa2"
-                                                    }}
-                                                >
-                                                    ✅ Food Distributed
-                                                    Successfully
-                                                </h4>
-
-                                                <p
-                                                    style={{
-                                                        margin:
-                                                            "0 0 12px",
-                                                        color: "#555",
-                                                        fontSize:
-                                                            "13px"
-                                                    }}
-                                                >
-                                                    The volunteer has
-                                                    uploaded proof that
-                                                    your donated food was
-                                                    distributed.
-                                                </p>
-
-                                                <h4
-                                                    style={{
-                                                        margin:
-                                                            "0 0 10px",
-                                                        color:
-                                                            "#7b1fa2"
-                                                    }}
-                                                >
-                                                    📷 Distribution Proof
+                                        {/* Donor Proof */}
+                                        {donation.donorProofImage && (
+                                            <div className="proof-section">
+                                                <h4>
+                                                    📷 Food Proof
                                                 </h4>
 
                                                 <img
                                                     src={
-                                                        donation.volunteerProofImage
+                                                        donation.donorProofImage
                                                     }
-                                                    alt="Volunteer distribution proof"
-                                                    style={{
-                                                        width: "100%",
-                                                        maxHeight:
-                                                            "250px",
-                                                        objectFit:
-                                                            "cover",
-                                                        borderRadius:
-                                                            "10px",
-                                                        display: "block"
-                                                    }}
+                                                    alt="Donated food proof"
                                                 />
                                             </div>
                                         )}
 
-                                    {/* Status Message */}
-                                    <p
-                                        style={{
-                                            margin: 0,
-                                            padding: "12px",
-                                            backgroundColor:
-                                                getStatusStyle(
-                                                    donation.status
-                                                ).backgroundColor,
-                                            color:
-                                                getStatusStyle(
-                                                    donation.status
-                                                ).color,
-                                            borderRadius: "9px",
-                                            fontSize: "13px"
-                                        }}
-                                    >
-                                        {getStatusMessage(
-                                            donation.status
-                                        )}
-                                    </p>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                </section>
-            </main>
+                                        {/* Volunteer */}
+                                        {donation.claimedBy && (
+                                            <div className="volunteer-section">
+                                                <h4>
+                                                    🤝 Volunteer Details
+                                                </h4>
 
-            <footer
-                style={{
-                    textAlign: "center",
-                    padding: "25px",
-                    color: "#777",
-                    fontSize: "13px"
-                }}
-            >
-                Together, we can reduce food waste 🌱❤️
-            </footer>
+                                                <p>
+                                                    <strong>
+                                                        Name:
+                                                    </strong>{" "}
+                                                    {
+                                                        donation
+                                                            .claimedBy
+                                                            .name
+                                                    }
+                                                </p>
+
+                                                <p>
+                                                    <strong>
+                                                        Email:
+                                                    </strong>{" "}
+                                                    {
+                                                        donation
+                                                            .claimedBy
+                                                            .email
+                                                    }
+                                                </p>
+                                            </div>
+                                        )}
+
+                                        {/* OTP */}
+                                        {donation.status ===
+                                            "claimed" && (
+                                            <div className="otp-section">
+                                                <h4>
+                                                    🔐 Pickup OTP
+                                                </h4>
+
+                                                {generatedOtps[
+                                                    donation._id
+                                                ] ? (
+                                                    <>
+                                                        <div className="otp-code">
+                                                            {
+                                                                generatedOtps[
+                                                                    donation
+                                                                        ._id
+                                                                ]
+                                                            }
+                                                        </div>
+
+                                                        <p>
+                                                            Share this OTP
+                                                            with the
+                                                            volunteer for
+                                                            pickup
+                                                            verification.
+                                                        </p>
+                                                    </>
+                                                ) : (
+                                                    <button
+                                                        className="generate-otp-button"
+                                                        onClick={() =>
+                                                            generateOTP(
+                                                                donation._id
+                                                            )
+                                                        }
+                                                    >
+                                                        🔐 Generate OTP
+                                                    </button>
+                                                )}
+                                            </div>
+                                        )}
+
+                                        {/* Distribution Proof */}
+                                        {donation.status ===
+                                            "distributed" &&
+                                            donation.volunteerProofImage && (
+                                                <div className="distribution-section">
+                                                    <h4>
+                                                        ✅ Food Distributed
+                                                        Successfully
+                                                    </h4>
+
+                                                    <p>
+                                                        The volunteer has
+                                                        uploaded proof
+                                                        that your donated
+                                                        food was
+                                                        distributed.
+                                                    </p>
+
+                                                    <h4>
+                                                        📷 Distribution
+                                                        Proof
+                                                    </h4>
+
+                                                    <img
+                                                        src={
+                                                            donation.volunteerProofImage
+                                                        }
+                                                        alt="Volunteer distribution proof"
+                                                    />
+                                                </div>
+                                            )}
+
+                                        {/* Status Message */}
+                                        <div
+                                            className="status-message"
+                                            style={{
+                                                backgroundColor:
+                                                    getStatusStyle(
+                                                        donation.status
+                                                    )
+                                                        .backgroundColor,
+                                                color:
+                                                    getStatusStyle(
+                                                        donation.status
+                                                    ).color
+                                            }}
+                                        >
+                                            {getStatusMessage(
+                                                donation.status
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </section>
+
+                    {/* Impact */}
+                    <section
+                        id="impact-section"
+                        className="impact-section"
+                    >
+                        <div className="impact-icon">🌱</div>
+
+                        <div>
+                            <span>YOUR IMPACT</span>
+
+                            <h2>
+                                Every donation makes a difference.
+                            </h2>
+
+                            <p>
+                                By sharing surplus food, you're helping
+                                reduce waste and making sure good food
+                                reaches people who need it.
+                            </p>
+                        </div>
+                    </section>
+                </main>
+
+                <footer className="dashboard-footer">
+                    <p>
+                        Together, we can reduce food waste
+                        <span> 🌱❤️</span>
+                    </p>
+
+                    <span>FoodShare • Donor Portal</span>
+                </footer>
+            </div>
         </div>
     );
 }

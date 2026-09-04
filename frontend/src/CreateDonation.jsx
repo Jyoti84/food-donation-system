@@ -48,7 +48,7 @@ function CreateDonation({ onDonationCreated }) {
                 return;
             }
 
-            alert("Donation created successfully");
+            
 
             setFoodType("");
             setQuantity("");
