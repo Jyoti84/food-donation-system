@@ -1,6 +1,7 @@
 const User = require("../models/User");
 const Donation = require("../models/Donation");
 
+// Get all users
 const getAllUsers = async (req, res) => {
     try {
         const users = await User.find()
@@ -19,6 +20,7 @@ const getAllUsers = async (req, res) => {
     }
 };
 
+// Get platform statistics
 const getStats = async (req, res) => {
     try {
         const totalUsers = await User.countDocuments();
@@ -68,6 +70,7 @@ const getStats = async (req, res) => {
     }
 };
 
+// Get all donations
 const getAllDonations = async (req, res) => {
     try {
         const donations = await Donation.find()
@@ -86,8 +89,72 @@ const getAllDonations = async (req, res) => {
         });
     }
 };
+
+// Deactivate user
+const deactivateUser = async (req, res) => {
+    try {
+        const user = await User.findById(req.params.id);
+
+        if (!user) {
+            return res.status(404).json({
+                message: "User not found"
+            });
+        }
+
+        // Admin cannot deactivate their own account
+        if (user._id.toString() === req.user.id.toString()) {
+            return res.status(400).json({
+                message: "You cannot deactivate your own account"
+            });
+        }
+
+        user.isActive = false;
+
+        await user.save();
+
+        res.status(200).json({
+            message: "User deactivated successfully"
+        });
+    } catch (error) {
+        console.error("Deactivate user error:", error);
+
+        res.status(500).json({
+            message: "Server error"
+        });
+    }
+};
+
+// Activate user
+const activateUser = async (req, res) => {
+    try {
+        const user = await User.findById(req.params.id);
+
+        if (!user) {
+            return res.status(404).json({
+                message: "User not found"
+            });
+        }
+
+        user.isActive = true;
+
+        await user.save();
+
+        res.status(200).json({
+            message: "User activated successfully"
+        });
+    } catch (error) {
+        console.error("Activate user error:", error);
+
+        res.status(500).json({
+            message: "Server error"
+        });
+    }
+};
+
 module.exports = {
     getAllUsers,
     getStats,
-    getAllDonations
+    getAllDonations,
+    deactivateUser,
+    activateUser
 };

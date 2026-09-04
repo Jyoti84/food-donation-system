@@ -1,4 +1,5 @@
 import { useState } from "react";
+import Home from "./Home";
 import Login from "./Login";
 import Register from "./Register";
 import DonorDashboard from "./DonorDashboard";
@@ -6,7 +7,7 @@ import VolunteerDashboard from "./VolunteerDashboard";
 import AdminDashboard from "./AdminDashboard";
 
 function App() {
-    const [page, setPage] = useState("login");
+    const [page, setPage] = useState("home");
 
     const handleLogout = () => {
         localStorage.removeItem("token");
@@ -52,6 +53,39 @@ function App() {
         );
     }
 
+    if (page === "home") {
+        return (
+            <div
+                style={{
+                    width: "100%",
+                    minHeight: "100vh"
+                }}
+            >
+                <Home
+                    onLogin={() => setPage("login")}
+                    onRegister={() => setPage("register")}
+                />
+            </div>
+        );
+    }
+
+    if (page === "login") {
+        return (
+            <div
+                style={{
+                    width: "100%",
+                    minHeight: "100vh"
+                }}
+            >
+                <Login
+                    onLogin={(role) => setPage(role)}
+                    onRegister={() => setPage("register")}
+                    onBackHome={() => setPage("home")}
+                />
+            </div>
+        );
+    }
+
     return (
         <div
             style={{
@@ -59,14 +93,11 @@ function App() {
                 minHeight: "100vh"
             }}
         >
-            {page === "login" ? (
-                <Login
-                    onLogin={(role) => setPage(role)}
-                    onRegister={() => setPage("register")}
-                />
-            ) : (
-                <Register onLogin={() => setPage("login")} />
-            )}
+            <Register
+                onLogin={() => setPage("login")}
+                onBackHome={() => setPage("home")}
+            />
+            
         </div>
     );
 }

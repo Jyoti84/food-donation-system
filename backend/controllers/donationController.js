@@ -20,20 +20,23 @@ const createDonation = async (req, res) => {
 
         const uploadToCloudinary = () => {
             return new Promise((resolve, reject) => {
-                const uploadStream = cloudinary.uploader.upload_stream(
-                    {
-                        folder: "food-donation/donor-proofs"
-                    },
-                    (error, result) => {
-                        if (error) {
-                            reject(error);
-                        } else {
-                            resolve(result);
+                const uploadStream =
+                    cloudinary.uploader.upload_stream(
+                        {
+                            folder: "food-donation/donor-proofs"
+                        },
+                        (error, result) => {
+                            if (error) {
+                                reject(error);
+                            } else {
+                                resolve(result);
+                            }
                         }
-                    }
-                );
+                    );
 
-                Readable.from([req.file.buffer]).pipe(uploadStream);
+                Readable.from([req.file.buffer]).pipe(
+                    uploadStream
+                );
             });
         };
 
@@ -53,7 +56,6 @@ const createDonation = async (req, res) => {
             message: "Donation created successfully",
             donation
         });
-
     } catch (error) {
         console.error("Create donation error:", error);
 
@@ -190,7 +192,8 @@ const updateDonation = async (req, res) => {
 
             const result = await uploadToCloudinary();
 
-            donation.donorProofImage = result.secure_url;
+            donation.donorProofImage =
+                result.secure_url;
         }
 
         await donation.save();
@@ -199,7 +202,6 @@ const updateDonation = async (req, res) => {
             message: "Donation updated successfully",
             donation
         });
-
     } catch (error) {
         console.error("Update donation error:", error);
 
@@ -240,9 +242,49 @@ const deleteDonation = async (req, res) => {
         return res.status(200).json({
             message: "Donation deleted successfully"
         });
-
     } catch (error) {
         console.error("Delete donation error:", error);
+
+        return res.status(500).json({
+            message: "Server error",
+            error: error.message
+        });
+    }
+};
+
+
+// ADMIN deletes an available donation
+const adminDeleteDonation = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const donation = await Donation.findById(id);
+
+        if (!donation) {
+            return res.status(404).json({
+                message: "Donation not found"
+            });
+        }
+
+        // Admin can only delete available donations
+        if (donation.status !== "available") {
+            return res.status(400).json({
+                message:
+                    "Only available donations can be deleted by admin"
+            });
+        }
+
+        await Donation.findByIdAndDelete(id);
+
+        return res.status(200).json({
+            message:
+                "Donation deleted successfully by admin"
+        });
+    } catch (error) {
+        console.error(
+            "Admin delete donation error:",
+            error
+        );
 
         return res.status(500).json({
             message: "Server error",
@@ -272,7 +314,8 @@ const claimDonation = async (req, res) => {
 
         if (!donation) {
             return res.status(400).json({
-                message: "Donation is already claimed or does not exist"
+                message:
+                    "Donation is already claimed or does not exist"
             });
         }
 
@@ -280,7 +323,6 @@ const claimDonation = async (req, res) => {
             message: "Donation claimed successfully",
             donation
         });
-
     } catch (error) {
         console.error("Claim donation error:", error);
 
@@ -305,7 +347,8 @@ const generateOTP = async (req, res) => {
 
         if (!donation) {
             return res.status(400).json({
-                message: "Donation not found or not claimed yet"
+                message:
+                    "Donation not found or not claimed yet"
             });
         }
 
@@ -322,7 +365,6 @@ const generateOTP = async (req, res) => {
             message: "OTP generated successfully",
             otp
         });
-
     } catch (error) {
         console.error("Generate OTP error:", error);
 
@@ -347,13 +389,15 @@ const verifyOTP = async (req, res) => {
 
         if (!donation) {
             return res.status(400).json({
-                message: "Donation not found or not claimed by you"
+                message:
+                    "Donation not found or not claimed by you"
             });
         }
 
         if (!donation.otp) {
             return res.status(400).json({
-                message: "OTP has not been generated by the donor yet"
+                message:
+                    "OTP has not been generated by the donor yet"
             });
         }
 
@@ -369,10 +413,10 @@ const verifyOTP = async (req, res) => {
         await donation.save();
 
         return res.status(200).json({
-            message: "OTP verified successfully. Food marked as picked.",
+            message:
+                "OTP verified successfully. Food marked as picked.",
             donation
         });
-
     } catch (error) {
         console.error("Verify OTP error:", error);
 
@@ -396,48 +440,58 @@ const uploadDistributionProof = async (req, res) => {
 
         if (!donation) {
             return res.status(400).json({
-                message: "Donation not found or not assigned to you"
+                message:
+                    "Donation not found or not assigned to you"
             });
         }
 
         if (!req.file) {
             return res.status(400).json({
-                message: "Distribution proof image is required"
+                message:
+                    "Distribution proof image is required"
             });
         }
 
         const uploadToCloudinary = () => {
             return new Promise((resolve, reject) => {
-                const uploadStream = cloudinary.uploader.upload_stream(
-                    {
-                        folder: "food-donation/volunteer-proofs"
-                    },
-                    (error, result) => {
-                        if (error) {
-                            reject(error);
-                        } else {
-                            resolve(result);
+                const uploadStream =
+                    cloudinary.uploader.upload_stream(
+                        {
+                            folder:
+                                "food-donation/volunteer-proofs"
+                        },
+                        (error, result) => {
+                            if (error) {
+                                reject(error);
+                            } else {
+                                resolve(result);
+                            }
                         }
-                    }
-                );
+                    );
 
-                Readable.from([req.file.buffer]).pipe(uploadStream);
+                Readable.from([req.file.buffer]).pipe(
+                    uploadStream
+                );
             });
         };
 
         const result = await uploadToCloudinary();
 
-        donation.volunteerProofImage = result.secure_url;
+        donation.volunteerProofImage =
+            result.secure_url;
 
         await donation.save();
 
         return res.status(200).json({
-            message: "Distribution proof uploaded successfully",
+            message:
+                "Distribution proof uploaded successfully",
             donation
         });
-
     } catch (error) {
-        console.error("Distribution proof error:", error);
+        console.error(
+            "Distribution proof error:",
+            error
+        );
 
         return res.status(500).json({
             message: "Server error",
@@ -456,9 +510,11 @@ const getMyClaimedDonations = async (req, res) => {
         res.status(200).json({
             donations
         });
-
     } catch (error) {
-        console.error("My claimed donations error:", error);
+        console.error(
+            "My claimed donations error:",
+            error
+        );
 
         res.status(500).json({
             message: "Server error",
@@ -481,7 +537,8 @@ const markAsDistributed = async (req, res) => {
 
         if (!donation) {
             return res.status(400).json({
-                message: "Donation not found or not assigned to you"
+                message:
+                    "Donation not found or not assigned to you"
             });
         }
 
@@ -498,12 +555,15 @@ const markAsDistributed = async (req, res) => {
         await donation.save();
 
         return res.status(200).json({
-            message: "Donation marked as distributed",
+            message:
+                "Donation marked as distributed",
             donation
         });
-
     } catch (error) {
-        console.error("Mark as distributed error:", error);
+        console.error(
+            "Mark as distributed error:",
+            error
+        );
 
         return res.status(500).json({
             message: "Server error"
@@ -518,6 +578,7 @@ module.exports = {
     getMyDonations,
     updateDonation,
     deleteDonation,
+    adminDeleteDonation,
     claimDonation,
     generateOTP,
     verifyOTP,
